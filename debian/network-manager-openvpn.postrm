@@ -1,0 +1,12 @@
+#!/bin/sh
+
+set -e
+
+if [ "$1" = purge ]; then
+    if [ -x "$(command -v deluser)" ]; then
+        deluser --quiet --system nm-openvpn > /dev/null || true
+    fi
+    rm -rf /var/lib/openvpn/chroot
+fi
+
+#DEBHELPER#

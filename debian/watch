@@ -1,0 +1,2 @@
+version=4
+https://download.gnome.org/sources/NetworkManager-openvpn/([\d\.]+)/NetworkManager-openvpn-@ANY_VERSION@\.tar\.xz

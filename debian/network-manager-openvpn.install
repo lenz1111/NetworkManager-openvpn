@@ -1,0 +1,6 @@
+usr/libexec/nm-openvpn-service
+usr/libexec/nm-openvpn-service-openvpn-helper
+usr/lib/*/NetworkManager/libnm-vpn-plugin-openvpn.so
+usr/lib/NetworkManager/VPN/nm-openvpn-service.name
+usr/share/dbus-1/
+usr/share/locale/

@@ -2111,7 +2111,13 @@ check_need_secrets (NMSettingVpn *s_vpn, gboolean *need_secrets)
 		if (is_encrypted (key) && !nm_setting_vpn_get_secret (s_vpn, NM_OPENVPN_KEY_CERTPASS))
 			*need_secrets = TRUE;
 	} else if (nm_streq (ctype, NM_OPENVPN_CONTYPE_PKCS11)) {
-		*need_secrets = FALSE;
+		if (!nm_setting_vpn_get_secret (s_vpn, NM_OPENVPN_KEY_CERTPASS)) {
+			*need_secrets = TRUE;
+			if (nm_setting_get_secret_flags (NM_SETTING (s_vpn), NM_OPENVPN_KEY_CERTPASS, &secret_flags, NULL)) {
+				if (secret_flags & NM_SETTING_SECRET_FLAG_NOT_REQUIRED)
+					*need_secrets = FALSE;
+			}
+		}
 	} else {
 		/* Static key doesn't need passwords */
 	}

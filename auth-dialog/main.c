@@ -426,7 +426,7 @@ get_passwords_required (GHashTable *data,
 		flags = NM_SETTING_SECRET_FLAG_NONE;
 		nm_vpn_service_plugin_get_secret_flags (data, NM_OPENVPN_KEY_CERTPASS, &flags);
 		if (!(flags & NM_SETTING_SECRET_FLAG_NOT_REQUIRED))
-			*out_need_password = TRUE;
+			*out_need_certpass = TRUE;
 	}
 
 	val = g_hash_table_lookup (data, NM_OPENVPN_KEY_PROXY_SERVER);

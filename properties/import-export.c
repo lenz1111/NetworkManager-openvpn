@@ -1795,8 +1795,6 @@ handle_line_error:
 		}
 	}
 	if (have_pkcs11) {
-		gs_free char *key_path_free = NULL;
-
 		/* If there should be a private key password, default it to
 		 * being agent-owned. */
 		nm_setting_set_secret_flags (NM_SETTING (s_vpn),

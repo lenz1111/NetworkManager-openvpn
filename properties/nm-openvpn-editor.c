@@ -532,6 +532,8 @@ validate_pkcs11 (GtkBuilder *builder, GError **error)
 {
 	gboolean valid;
 	GError *local = NULL;
+	GtkWidget *widget;
+	const char *str;
 
 	valid = validate_cert_chooser (builder, "pkcs11_ca_cert", &local);
 	if (!valid) {
@@ -540,6 +542,16 @@ validate_pkcs11 (GtkBuilder *builder, GError **error)
 		             NMV_EDITOR_PLUGIN_ERROR_INVALID_PROPERTY,
 		             "%s: %s", NM_OPENVPN_KEY_CA, local->message);
 		g_error_free (local);
+		return FALSE;
+	}
+
+	widget = GTK_WIDGET (gtk_builder_get_object (builder, "pkcs11_id"));
+	str = gtk_editable_get_text (GTK_EDITABLE (widget));
+	if (!str || !*str) {
+		g_set_error (error,
+		             NMV_EDITOR_PLUGIN_ERROR,
+		             NMV_EDITOR_PLUGIN_ERROR_INVALID_PROPERTY,
+		             NM_OPENVPN_KEY_PKCS11_ID);
 		return FALSE;
 	}
 

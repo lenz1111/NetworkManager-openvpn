@@ -647,6 +647,40 @@ test_pkcs12_with_ca_import (void)
 }
 
 static void
+test_pkcs11_import (void)
+{
+	_CREATE_PLUGIN (plugin);
+	gs_unref_object NMConnection *connection = NULL;
+	NMSettingConnection *s_con;
+	NMSettingVpn *s_vpn;
+	const char *expected_id = "pkcs11";
+
+	connection = get_basic_connection (plugin, SRCDIR, "pkcs11.ovpn");
+
+	s_con = _get_setting_connection (connection);
+	g_assert_cmpstr (nm_setting_connection_get_id (s_con), ==, expected_id);
+	g_assert (!nm_setting_connection_get_uuid (s_con));
+
+	s_vpn = _get_setting_vpn (connection);
+
+	_check_item (s_vpn, NM_OPENVPN_KEY_CONNECTION_TYPE, NM_OPENVPN_CONTYPE_PKCS11);
+	_check_item (s_vpn, NM_OPENVPN_KEY_DEV, "tun");
+	_check_item (s_vpn, NM_OPENVPN_KEY_PROTO_TCP, "yes");
+	_check_item (s_vpn, NM_OPENVPN_KEY_REMOTE, "173.8.149.245:1194");
+	_check_item (s_vpn, NM_OPENVPN_KEY_PORT, NULL);
+	_check_item (s_vpn, NM_OPENVPN_KEY_CIPHER, "AES-256-GCM");
+	_check_item (s_vpn, NM_OPENVPN_KEY_REMOTE_IP, NULL);
+	_check_item (s_vpn, NM_OPENVPN_KEY_AUTH, NULL);
+	_check_item (s_vpn, NM_OPENVPN_KEY_CA,   SRCDIR"/keys/mine-ca.crt");
+
+	_check_item (s_vpn, NM_OPENVPN_KEY_PKCS11_ID, "Infineon/SLB9670/0000000000000000/myl4dprod/0123456789ABCDEF0123456789ABCDEF");
+	_check_item (s_vpn, NM_OPENVPN_KEY_PKCS11_PROVIDERS, "/usr/lib/x86_64-linux-gnu/pkcs11/libtpm2_pkcs11.so");
+
+	_check_secret (s_vpn, NM_OPENVPN_KEY_PASSWORD, NULL);
+	_check_secret (s_vpn, NM_OPENVPN_KEY_CERTPASS, NULL);
+}
+
+static void
 test_non_utf8_import (void)
 {
 	_CREATE_PLUGIN (plugin);
@@ -1457,6 +1491,9 @@ int main (int argc, char **argv)
 
 	_add_test_func_simple (test_pkcs12_with_ca_import);
 	_add_test_func ("pkcs12-with-ca-export", test_export_compare, "pkcs12-with-ca.ovpn", "pkcs12-with-ca.ovpntest");
+
+	_add_test_func_simple (test_pkcs11_import);
+	_add_test_func ("pkcs11-export", test_export_compare, "pkcs11.ovpn", "pkcs11.ovpntest");
 
 	_add_test_func_simple (test_non_utf8_import);
 

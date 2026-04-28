@@ -794,7 +794,7 @@ do_import (const char *path, const char *contents, gsize contents_len, GError **
 	char *tmp, *tmp2;
 	const char *ta_direction = NULL, *secret_direction = NULL;
 	gboolean allow_ta_direction = FALSE, allow_secret_direction = FALSE;
-	gboolean have_cert = FALSE, have_key = FALSE, have_ca = FALSE, have_pkcs12 = FALSE;
+	gboolean have_cert = FALSE, have_key = FALSE, have_ca = FALSE, have_pkcs12 = FALSE, have_pkcs11 = FALSE;
 	const char *cert_path = NULL, *key_path = NULL, *ca_path = NULL;
 	GSList *inline_blobs = NULL;
 	GSList *sl_iter;
@@ -1535,6 +1535,26 @@ do_import (const char *path, const char *contents, gsize contents_len, GError **
 			nm_ip_route_unref (route);
 		}
 
+		if (NM_IN_STRSET (params[0], NMV_OVPN_TAG_PKCS11_ID)) {
+			if (!args_params_check_nargs_n (params, 1, &line_error))
+				goto handle_line_error;
+			if (!args_params_check_arg_utf8 (params, 1, NULL, &line_error))
+				goto handle_line_error;
+			setting_vpn_add_data_item (s_vpn, NM_OPENVPN_KEY_PKCS11_ID, params[1]);
+			have_pkcs11 = TRUE;
+			continue;
+		}
+
+		if (NM_IN_STRSET (params[0], NMV_OVPN_TAG_PKCS11_PROVIDERS)) {
+			if (!args_params_check_nargs_n (params, 1, &line_error))
+				goto handle_line_error;
+			if (!args_params_check_arg_utf8 (params, 1, NULL, &line_error))
+				goto handle_line_error;
+			setting_vpn_add_data_item (s_vpn, NM_OPENVPN_KEY_PKCS11_PROVIDERS, params[1]);
+			have_pkcs11 = TRUE;
+			continue;
+		}
+
 		if (params[0][0] == '<' && params[0][strlen (params[0]) - 1] == '>') {
 			gs_free char *token = g_strndup (&params[0][1], strlen (params[0]) - 2);
 			gs_free char *end_token = NULL;
@@ -1748,15 +1768,18 @@ handle_line_error:
 	}
 
 	/* Determine connection type */
-	if (have_pass) {
+	if (have_pkcs11) {
+		ctype = NM_OPENVPN_CONTYPE_PKCS11;
+	} else if (have_pass) {
 		if (have_cert || have_pkcs12)
 			ctype = NM_OPENVPN_CONTYPE_PASSWORD_TLS;
 		else if (have_ca)
 			ctype = NM_OPENVPN_CONTYPE_PASSWORD;
 	} else if (have_cert || have_pkcs12) {
 		ctype = NM_OPENVPN_CONTYPE_TLS;
-	} else if (have_sk)
+	} else if (have_sk) {
 		ctype = NM_OPENVPN_CONTYPE_STATIC_KEY;
+	}
 
 	if (!ctype)
 		ctype = NM_OPENVPN_CONTYPE_TLS;
@@ -1818,6 +1841,14 @@ handle_line_error:
 			tmp_list = sl_iter;
 		}
 		inline_blobs = tmp_list;
+	}
+	if (have_pkcs11) {
+		/* If there should be a private key password, default it to
+		 * being agent-owned. */
+		nm_setting_set_secret_flags (NM_SETTING (s_vpn),
+		                             NM_OPENVPN_KEY_CERTPASS,
+		                             NM_SETTING_SECRET_FLAG_AGENT_OWNED,
+		                             NULL);
 	}
 
 	for (sl_iter = inline_blobs; sl_iter; sl_iter = sl_iter->next) {
@@ -2025,7 +2056,8 @@ do_export_create (NMConnection *connection, const char *path, GError **error)
 
 	if (NM_IN_STRSET (connection_type, NM_OPENVPN_CONTYPE_TLS,
 	                                   NM_OPENVPN_CONTYPE_PASSWORD,
-	                                   NM_OPENVPN_CONTYPE_PASSWORD_TLS))
+	                                   NM_OPENVPN_CONTYPE_PASSWORD_TLS,
+	                                   NM_OPENVPN_CONTYPE_PKCS11))
 		args_write_line (f, NMV_OVPN_TAG_CLIENT);
 
 	/* 'remote' */
@@ -2072,7 +2104,8 @@ do_export_create (NMConnection *connection, const char *path, GError **error)
 
 		if (NM_IN_STRSET (connection_type, NM_OPENVPN_CONTYPE_TLS,
 		                                   NM_OPENVPN_CONTYPE_PASSWORD,
-		                                   NM_OPENVPN_CONTYPE_PASSWORD_TLS)) {
+		                                   NM_OPENVPN_CONTYPE_PASSWORD_TLS,
+		                                   NM_OPENVPN_CONTYPE_PKCS11)) {
 			value = nm_setting_vpn_get_data_item (s_vpn, NM_OPENVPN_KEY_CA);
 			if (nmovpn_arg_is_set (value))
 				cacert = nm_utils_str_utf8safe_unescape (value, &cacert_free);
@@ -2119,6 +2152,26 @@ do_export_create (NMConnection *connection, const char *path, GError **error)
 			                 NMV_OVPN_TAG_SECRET,
 			                 nm_utils_str_utf8safe_unescape (value, &s_free),
 			                 nmovpn_arg_is_set (nm_setting_vpn_get_data_item (s_vpn, NM_OPENVPN_KEY_STATIC_KEY_DIRECTION)));
+		}
+	}
+
+	if (NM_IN_STRSET (connection_type, NM_OPENVPN_CONTYPE_PKCS11)) {
+		value = nm_setting_vpn_get_data_item (s_vpn, NM_OPENVPN_KEY_PKCS11_ID);
+		if (nmovpn_arg_is_set (value)) {
+			gs_free char *s_free = NULL;
+
+			args_write_line (f,
+			                 NMV_OVPN_TAG_PKCS11_ID,
+			                 nm_utils_str_utf8safe_unescape (value, &s_free));
+		}
+
+		value = nm_setting_vpn_get_data_item (s_vpn, NM_OPENVPN_KEY_PKCS11_PROVIDERS);
+		if (nmovpn_arg_is_set (value)) {
+			gs_free char *s_free = NULL;
+
+			args_write_line (f,
+			                 NMV_OVPN_TAG_PKCS11_PROVIDERS,
+			                 nm_utils_str_utf8safe_unescape (value, &s_free));
 		}
 	}
 
@@ -2220,7 +2273,8 @@ do_export_create (NMConnection *connection, const char *path, GError **error)
 	                  /* TLS-Auth/Crypt might be used in the control channel even outside
 	                   * of the SSL/TLS mode. */
 	                  NM_OPENVPN_CONTYPE_PASSWORD,
-	                  NM_OPENVPN_CONTYPE_PASSWORD_TLS)) {
+	                  NM_OPENVPN_CONTYPE_PASSWORD_TLS,
+	                  NM_OPENVPN_CONTYPE_PKCS11)) {
 		const char *x509_name, *key;
 
 		args_write_line_setting_value (f, NMV_OVPN_TAG_REMOTE_CERT_TLS, s_vpn, NM_OPENVPN_KEY_REMOTE_CERT_TLS);

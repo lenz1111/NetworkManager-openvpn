@@ -199,6 +199,8 @@ static const ValidProperty valid_properties[] = {
 	{ NM_OPENVPN_KEY_TLS_VERSION_MIN_OR_HIGHEST,G_TYPE_BOOLEAN, 0, 0, FALSE },
 	{ NM_OPENVPN_KEY_TLS_VERSION_MAX,           G_TYPE_STRING, 0, 0, FALSE },
 	{ NM_OPENVPN_KEY_CHALLENGE_RESPONSE_FLAGS,  G_TYPE_STRING, 0, 0, FALSE },
+	{ NM_OPENVPN_KEY_PKCS11_ID,                 G_TYPE_STRING, 0, 0, FALSE },
+	{ NM_OPENVPN_KEY_PKCS11_PROVIDERS,          G_TYPE_STRING, 0, 0, FALSE },
 	{ NULL,                                     G_TYPE_NONE, FALSE }
 };
 
@@ -241,7 +243,8 @@ validate_connection_type (const char *ctype)
 	return NM_IN_STRSET (ctype, NM_OPENVPN_CONTYPE_TLS,
 	                            NM_OPENVPN_CONTYPE_STATIC_KEY,
 	                            NM_OPENVPN_CONTYPE_PASSWORD,
-	                            NM_OPENVPN_CONTYPE_PASSWORD_TLS);
+	                            NM_OPENVPN_CONTYPE_PASSWORD_TLS,
+	                            NM_OPENVPN_CONTYPE_PKCS11);
 }
 
 static gboolean
@@ -249,7 +252,8 @@ connection_type_is_tls_mode (const char *connection_type)
 {
 	return NM_IN_STRSET (connection_type, NM_OPENVPN_CONTYPE_TLS,
 	                                      NM_OPENVPN_CONTYPE_PASSWORD,
-	                                      NM_OPENVPN_CONTYPE_PASSWORD_TLS);
+	                                      NM_OPENVPN_CONTYPE_PASSWORD_TLS,
+	                                      NM_OPENVPN_CONTYPE_PKCS11);
 }
 
 /*****************************************************************************/
@@ -414,9 +418,13 @@ args_add_vpn_certs (GPtrArray *args,
 	const char *ca;
 	const char *cert;
 	const char *key;
+	const char *pkcs11_id;
+	const char *pkcs11_providers;
 	gs_free char *ca_free = NULL;
 	gs_free char *cert_free = NULL;
 	gs_free char *key_free = NULL;
+	gs_free char *pkcs11_id_free = NULL;
+	gs_free char *pkcs11_providers_free = NULL;
 	gs_free char *ca_tmp = NULL;
 	gs_free char *cert_tmp = NULL;
 	gs_free char *key_tmp = NULL;
@@ -428,9 +436,15 @@ args_add_vpn_certs (GPtrArray *args,
 	cert = nm_setting_vpn_get_data_item (s_vpn, NM_OPENVPN_KEY_CERT);
 	key  = nm_setting_vpn_get_data_item (s_vpn, NM_OPENVPN_KEY_KEY);
 
+	pkcs11_id        = nm_setting_vpn_get_data_item (s_vpn, NM_OPENVPN_KEY_PKCS11_ID);
+	pkcs11_providers = nm_setting_vpn_get_data_item (s_vpn, NM_OPENVPN_KEY_PKCS11_PROVIDERS);
+
 	ca   = nm_utils_str_utf8safe_unescape (ca,   &ca_free);
 	cert = nm_utils_str_utf8safe_unescape (cert, &cert_free);
 	key  = nm_utils_str_utf8safe_unescape (key,  &key_free);
+
+	pkcs11_id        = nm_utils_str_utf8safe_unescape (pkcs11_id,  &pkcs11_id_free);
+	pkcs11_providers = nm_utils_str_utf8safe_unescape (pkcs11_providers,  &pkcs11_providers_free);
 
 	if (nmovpn_arg_is_set (ca)) {
 		ca_tmp = access_file (ca, private_user, FALSE, error);
@@ -442,7 +456,12 @@ args_add_vpn_certs (GPtrArray *args,
 		}
 	}
 
-	if (nmovpn_arg_is_set (cert)) {
+	if (nmovpn_arg_is_set (pkcs11_id)) {
+		args_add_strv (args, "--pkcs11-id", pkcs11_id);
+		if (nmovpn_arg_is_set (pkcs11_providers)) {
+			args_add_strv (args, "--pkcs11-providers", pkcs11_providers);
+		}
+	} else if (nmovpn_arg_is_set (cert)) {
 		cert_tmp = access_file (cert, private_user, FALSE, error);
 		if (!cert_tmp)
 			return FALSE;
@@ -1039,7 +1058,7 @@ handle_auth (NMOpenvpnPluginIOData *io_data,
 			}
 		}
 		handled = TRUE;
-	} else if (nm_streq (requested_auth, "Private Key")) {
+	} else if (nm_streq (requested_auth, "Private Key") || g_str_has_suffix (requested_auth, " token")) {
 		if (io_data->priv_key_pass) {
 			char *qpass, *buf;
 
@@ -1053,6 +1072,10 @@ handle_auth (NMOpenvpnPluginIOData *io_data,
 			g_io_channel_write_chars (io_data->socket_channel, buf, strlen (buf), NULL, NULL);
 			g_io_channel_flush (io_data->socket_channel, NULL);
 			g_free (buf);
+		} else if (g_str_has_suffix (requested_auth, " token")) {
+			hints = g_new0 (const char *, 2);
+			hints[i++] = NM_OPENVPN_KEY_CERTPASS;
+			*out_message = _("Password.");
 		} else {
 			hints = g_new0 (const char *, 2);
 			hints[i++] = NM_OPENVPN_KEY_CERTPASS;
@@ -2110,6 +2133,10 @@ nm_openvpn_start_openvpn_binary (NMOpenvpnPlugin *plugin,
 			return FALSE;
 		/* Use user/path authentication */
 		args_add_strv (args, "--auth-user-pass");
+	} else if (nm_streq (connection_type, NM_OPENVPN_CONTYPE_PKCS11)) {
+		args_add_strv (args, "--client");
+		if (!args_add_vpn_certs (args, s_vpn, private_user, error))
+			return FALSE;
 	} else {
 		g_set_error (error,
 		             NM_VPN_PLUGIN_ERROR,
@@ -2182,7 +2209,8 @@ nm_openvpn_start_openvpn_binary (NMOpenvpnPlugin *plugin,
 	*/
 	if (   NM_IN_STRSET (connection_type, NM_OPENVPN_CONTYPE_TLS,
 	                                      NM_OPENVPN_CONTYPE_PASSWORD,
-	                                      NM_OPENVPN_CONTYPE_PASSWORD_TLS)
+	                                      NM_OPENVPN_CONTYPE_PASSWORD_TLS,
+	                                      NM_OPENVPN_CONTYPE_PKCS11)
 	    || nm_setting_vpn_get_data_item (s_vpn, NM_OPENVPN_KEY_HTTP_PROXY_USERNAME)) {
 
 		priv->io_data = g_malloc0 (sizeof (NMOpenvpnPluginIOData));
@@ -2239,6 +2267,14 @@ check_need_secrets (NMSettingVpn *s_vpn, gboolean *need_secrets)
 		key = nm_utils_str_utf8safe_unescape (key, &key_free);
 		if (is_encrypted (key) && !nm_setting_vpn_get_secret (s_vpn, NM_OPENVPN_KEY_CERTPASS))
 			*need_secrets = TRUE;
+	} else if (nm_streq (ctype, NM_OPENVPN_CONTYPE_PKCS11)) {
+		if (!nm_setting_vpn_get_secret (s_vpn, NM_OPENVPN_KEY_CERTPASS)) {
+			*need_secrets = TRUE;
+			if (nm_setting_get_secret_flags (NM_SETTING (s_vpn), NM_OPENVPN_KEY_CERTPASS, &secret_flags, NULL)) {
+				if (secret_flags & NM_SETTING_SECRET_FLAG_NOT_REQUIRED)
+					*need_secrets = FALSE;
+			}
+		}
 	} else {
 		/* Static key doesn't need passwords */
 	}

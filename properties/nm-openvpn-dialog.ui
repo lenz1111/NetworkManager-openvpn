@@ -931,6 +931,9 @@ config: pkcs11-id</property>
       <widget name="label12"/>
       <widget name="label11"/>
       <widget name="auth_label"/>
+      <widget name="label29"/>
+      <widget name="label30"/>
+      <widget name="label26"/>
     </widgets>
   </object>
   <object class="GtkListStore" id="model3">

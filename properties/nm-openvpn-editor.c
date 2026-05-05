@@ -249,16 +249,22 @@ pkcs11_setup (GtkBuilder *builder,
 	widget = GTK_WIDGET (gtk_builder_get_object (builder, "pkcs11_id"));
 	if (s_vpn) {
 		value = nm_setting_vpn_get_data_item (s_vpn, NM_OPENVPN_KEY_PKCS11_ID);
-		if (value && *value)
-			gtk_editable_set_text (GTK_EDITABLE (widget), value);
+		if (value && *value) {
+			gs_free char *unescaped = NULL;
+
+			gtk_editable_set_text (GTK_EDITABLE (widget), nm_utils_str_utf8safe_unescape (value, &unescaped));
+		}
 	}
 	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (changed_cb), user_data);
 
 	widget = GTK_WIDGET (gtk_builder_get_object (builder, "pkcs11_providers"));
 	if (s_vpn) {
 		value = nm_setting_vpn_get_data_item (s_vpn, NM_OPENVPN_KEY_PKCS11_PROVIDERS);
-		if (value && *value)
-			gtk_editable_set_text (GTK_EDITABLE (widget), value);
+		if (value && *value) {
+			gs_free char *unescaped = NULL;
+
+			gtk_editable_set_text (GTK_EDITABLE (widget), nm_utils_str_utf8safe_unescape (value, &unescaped));
+		}
 	}
 	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (changed_cb), user_data);
 
@@ -729,13 +735,21 @@ update_pkcs11 (GtkBuilder *builder, NMSettingVpn *s_vpn)
 
 	widget = GTK_WIDGET (gtk_builder_get_object (builder, "pkcs11_id"));
 	str = gtk_editable_get_text (GTK_EDITABLE (widget));
-	if (str && *str)
-		nm_setting_vpn_add_data_item (s_vpn, NM_OPENVPN_KEY_PKCS11_ID, str);
+	if (str && *str) {
+		gs_free char *escaped = NULL;
+
+		nm_setting_vpn_add_data_item (s_vpn, NM_OPENVPN_KEY_PKCS11_ID,
+		                              nm_utils_str_utf8safe_escape (str, 0, &escaped));
+	}
 
 	widget = GTK_WIDGET (gtk_builder_get_object (builder, "pkcs11_providers"));
 	str = gtk_editable_get_text (GTK_EDITABLE (widget));
-	if (str && *str)
-		nm_setting_vpn_add_data_item (s_vpn, NM_OPENVPN_KEY_PKCS11_PROVIDERS, str);
+	if (str && *str) {
+		gs_free char *escaped = NULL;
+
+		nm_setting_vpn_add_data_item (s_vpn, NM_OPENVPN_KEY_PKCS11_PROVIDERS,
+		                              nm_utils_str_utf8safe_escape (str, 0, &escaped));
+	}
 
 	widget = (GtkWidget *) gtk_builder_get_object (builder, "pkcs11_pin");
 	str = gtk_editable_get_text (GTK_EDITABLE (widget));

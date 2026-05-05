@@ -125,27 +125,6 @@ setting_vpn_add_data_item (NMSettingVpn *setting,
 	nm_setting_vpn_add_data_item (setting, key, value);
 }
 
-static char *
-_pkcs11_unescape (const char *value)
-{
-	GString *s;
-	const char *p;
-
-	if (!value || !value[0])
-		return g_strdup (value);
-
-	s = g_string_sized_new (strlen (value));
-	for (p = value; *p; p++) {
-		if (p[0] == '\\' && p[1] == 'x' && g_ascii_isxdigit (p[2]) && g_ascii_isxdigit (p[3])) {
-			g_string_append_c (s, (g_ascii_xdigit_value (p[2]) << 4) | g_ascii_xdigit_value (p[3]));
-			p += 3;
-		} else {
-			g_string_append_c (s, *p);
-		}
-	}
-	return g_string_free (s, FALSE);
-}
-
 static void
 setting_vpn_add_data_item_utf8safe (NMSettingVpn *setting,
                                     const char *key,
@@ -1546,14 +1525,11 @@ do_import (const char *path, const char *contents, gsize contents_len, GError **
 		}
 
 		if (NM_IN_STRSET (params[0], NMV_OVPN_TAG_PKCS11_ID)) {
-			gs_free char *unescaped = NULL;
-
 			if (!args_params_check_nargs_n (params, 1, &line_error))
 				goto handle_line_error;
 			if (!args_params_check_arg_utf8 (params, 1, NULL, &line_error))
 				goto handle_line_error;
-			unescaped = _pkcs11_unescape (params[1]);
-			setting_vpn_add_data_item (s_vpn, NM_OPENVPN_KEY_PKCS11_ID, unescaped);
+			setting_vpn_add_data_item_utf8safe (s_vpn, NM_OPENVPN_KEY_PKCS11_ID, params[1]);
 			have_pkcs11 = TRUE;
 			continue;
 		}
@@ -1563,7 +1539,7 @@ do_import (const char *path, const char *contents, gsize contents_len, GError **
 				goto handle_line_error;
 			if (!args_params_check_arg_utf8 (params, 1, NULL, &line_error))
 				goto handle_line_error;
-			setting_vpn_add_data_item (s_vpn, NM_OPENVPN_KEY_PKCS11_PROVIDERS, params[1]);
+			setting_vpn_add_data_item_utf8safe (s_vpn, NM_OPENVPN_KEY_PKCS11_PROVIDERS, params[1]);
 			have_pkcs11 = TRUE;
 			continue;
 		}

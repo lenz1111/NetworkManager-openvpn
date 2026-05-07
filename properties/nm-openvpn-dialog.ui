@@ -761,7 +761,7 @@ config: static &lt;file&gt; [direction]</property>
                           <object class="GtkComboBoxText" id="pkcs11_provider_combo">
                             <property name="visible">True</property>
                             <property name="can_focus">True</property>
-                            <property name="tooltip_text" translatable="yes">PKCS#11 provider library path.</property>
+                            <property name="tooltip_text" translatable="yes">PKCS#11 provider module.</property>
                             <property name="hexpand">True</property>
                           </object>
                           <packing>

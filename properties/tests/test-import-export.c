@@ -666,7 +666,7 @@ test_pkcs11_import (void)
 	_check_item (s_vpn, NM_OPENVPN_KEY_CA,   SRCDIR"/keys/mine-ca.crt");
 
 	_check_item (s_vpn, NM_OPENVPN_KEY_PKCS11_ID, "Provider\\\\x20\\\\x28www\\\\x2Eexample\\\\x2Ecom\\\\x29/MyKey\\\\x20KEY5/12345678\\\\x20PIV\\\\x20\\\\x2387654321/01");
-	_check_item (s_vpn, NM_OPENVPN_KEY_PKCS11_PROVIDERS, "/usr/lib/x86_64-linux-gnu/pkcs11/libtpm2_pkcs11.so");
+	_check_item (s_vpn, NM_OPENVPN_KEY_PKCS11_PROVIDERS, "/usr/lib/x86_64-linux-gnu/pkcs11/p11-kit-client.so");
 
 	_check_secret (s_vpn, NM_OPENVPN_KEY_PASSWORD, NULL);
 	_check_secret (s_vpn, NM_OPENVPN_KEY_CERTPASS, NULL);

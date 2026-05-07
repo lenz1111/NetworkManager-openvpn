@@ -270,12 +270,11 @@ pkcs11_populate_ids_for_provider (GtkComboBoxText *id_combo, const char *provide
 			if (pkcs11h_certificate_serializeCertificateId (
 			        NULL, &ser_len, cur->certificate_id) != CKR_OK)
 				continue;
-			ser = malloc (ser_len);
-			if (!ser) continue;
+			ser = g_malloc (ser_len);
 			if (pkcs11h_certificate_serializeCertificateId (
 			        ser, &ser_len, cur->certificate_id) == CKR_OK)
 				gtk_combo_box_text_append_text (id_combo, ser);
-			free (ser);
+			g_free (ser);
 		}
 		pkcs11h_certificate_freeCertificateIdList (certs);
 	}
@@ -288,7 +287,7 @@ static void
 pkcs11_provider_changed_cb (GtkComboBox *provider_combo, gpointer user_data)
 {
 	GtkComboBoxText *id_combo = GTK_COMBO_BOX_TEXT (user_data);
-	gs_free char *path = gtk_combo_box_text_get_active_text (GTK_COMBO_BOX_TEXT (provider_combo));
+	const char *path = gtk_combo_box_get_active_id (provider_combo);
 
 	/* Clear ID and repopulate when provider changes */
 	pkcs11_populate_ids_for_provider (id_combo, (path && *path) ? path : NULL);
@@ -300,7 +299,7 @@ pkcs11_populate_providers (GtkComboBoxText *combo)
 	CK_FUNCTION_LIST **modules;
 	int i;
 
-	gtk_combo_box_text_append_text (combo, "");
+	gtk_combo_box_text_append (combo, "", "");
 
 	modules = p11_kit_modules_load_and_initialize (0);
 	if (!modules)
@@ -316,7 +315,20 @@ pkcs11_populate_providers (GtkComboBoxText *combo)
 
 		path = p11_kit_module_get_filename (modules[i]);
 		if (path) {
-			gtk_combo_box_text_append_text (combo, path);
+			CK_INFO info;
+			gs_free char *label = NULL;
+
+			if (modules[i]->C_GetInfo (&info) == CKR_OK) {
+				gs_free char *manufacturer = g_strstrip (g_strndup ((char *)info.manufacturerID, 32));
+				gs_free char *description = g_strstrip (g_strndup ((char *)info.libraryDescription, 32));
+
+				if (manufacturer[0] && description[0])
+					label = g_strdup_printf ("%s: %s", manufacturer, description);
+				else if (description[0])
+					label = g_strdup (description);
+			}
+
+			gtk_combo_box_text_append (combo, path, label ? label : path);
 			free (path);
 		}
 	}
@@ -362,36 +374,18 @@ pkcs11_setup (GtkBuilder *builder,
 		if (prov_value && *prov_value) {
 			prov = nm_utils_str_utf8safe_unescape (prov_value, &prov_unesc);
 
-			/* Select matching provider, or append if not found */
-			model = gtk_combo_box_get_model (GTK_COMBO_BOX (provider_combo));
-			idx = 0;
-			found = FALSE;
-
-			if (gtk_tree_model_get_iter_first (model, &iter)) {
-				do {
-					gs_free char *item = NULL;
-					gtk_tree_model_get (model, &iter, 0, &item, -1);
-					if (item && g_strcmp0 (item, prov) == 0) {
-						gtk_combo_box_set_active (GTK_COMBO_BOX (provider_combo), idx);
-						found = TRUE;
-						break;
-					}
-					idx++;
-				} while (gtk_tree_model_iter_next (model, &iter));
+			/* Try to select by active_id (path) — if not found, leave empty */
+			if (gtk_combo_box_set_active_id (GTK_COMBO_BOX (provider_combo), prov)) {
+				/* Populate IDs for this provider */
+				pkcs11_populate_ids_for_provider (id_combo, prov);
 			}
-			if (!found) {
-				gtk_combo_box_text_append_text (provider_combo, prov);
-				gtk_combo_box_set_active (GTK_COMBO_BOX (provider_combo), idx);
-			}
-
-			/* Populate IDs for this provider */
-			pkcs11_populate_ids_for_provider (id_combo, prov);
 		}
 
-		if (id_value && *id_value) {
+		if (prov && gtk_combo_box_get_active (GTK_COMBO_BOX (provider_combo)) > 0
+		    && id_value && *id_value) {
 			id = nm_utils_str_utf8safe_unescape (id_value, &id_unesc);
 
-			/* Select matching ID, or append if not found */
+			/* Try to select by text match */
 			model = gtk_combo_box_get_model (GTK_COMBO_BOX (id_combo));
 			idx = 0;
 			found = FALSE;
@@ -902,12 +896,12 @@ update_pkcs11 (GtkBuilder *builder, NMSettingVpn *s_vpn)
 	/* Provider combo */
 	widget = GTK_WIDGET (gtk_builder_get_object (builder, "pkcs11_provider_combo"));
 	{
-		gs_free char *text = gtk_combo_box_text_get_active_text (GTK_COMBO_BOX_TEXT (widget));
-		if (text && *text) {
+		const char *id = gtk_combo_box_get_active_id (GTK_COMBO_BOX (widget));
+		if (id && *id) {
 			gs_free char *escaped = NULL;
 
 			nm_setting_vpn_add_data_item (s_vpn, NM_OPENVPN_KEY_PKCS11_PROVIDERS,
-			                              nm_utils_str_utf8safe_escape (text, 0, &escaped));
+			                              nm_utils_str_utf8safe_escape (id, 0, &escaped));
 		}
 	}
 

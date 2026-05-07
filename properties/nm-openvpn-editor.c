@@ -37,12 +37,18 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#include <pkcs11-helper-1.0/pkcs11h-core.h>
+#include <pkcs11-helper-1.0/pkcs11h-certificate.h>
+#include <pkcs11-helper-1.0/pkcs11h-token.h>
+#include <p11-kit/p11-kit.h>
+
 #include "utils.h"
 #include "nm-utils/nm-shared-utils.h"
 
 #if !GTK_CHECK_VERSION(4,0,0)
 #define gtk_editable_set_text(editable,text)		gtk_entry_set_text(GTK_ENTRY(editable), (text))
 #define gtk_editable_get_text(editable)			gtk_entry_get_text(GTK_ENTRY(editable))
+#define gtk_combo_box_get_child(combo)			gtk_bin_get_child(GTK_BIN(combo))
 #define gtk_window_destroy(window)			gtk_widget_destroy(GTK_WIDGET (window))
 #define gtk_widget_get_root(widget)			gtk_widget_get_toplevel(widget)
 #define gtk_check_button_get_active(button)		gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(button))
@@ -232,6 +238,93 @@ tls_setup (GtkBuilder *builder,
 }
 
 static void
+pkcs11_populate_ids_for_provider (GtkComboBoxText *id_combo, const char *provider_path)
+{
+	pkcs11h_certificate_id_list_t certs = NULL, cur;
+	CK_RV rv;
+
+	gtk_combo_box_text_remove_all (id_combo);
+	gtk_combo_box_text_append_text (id_combo, "");
+
+	if (!provider_path || !*provider_path)
+		return;
+
+	if ((rv = pkcs11h_initialize ()) != CKR_OK)
+		return;
+
+	pkcs11h_setLogLevel (0);
+
+	if (pkcs11h_addProvider (provider_path, provider_path, TRUE, 0,
+	                         PKCS11H_SLOTEVENT_METHOD_AUTO, 0, FALSE) != CKR_OK) {
+		pkcs11h_terminate ();
+		return;
+	}
+
+	if (pkcs11h_certificate_enumCertificateIds (
+	        PKCS11H_ENUM_METHOD_CACHE_EXIST, NULL,
+	        PKCS11H_PROMPT_MASK_ALLOW_ALL, NULL, &certs) == CKR_OK) {
+		for (cur = certs; cur != NULL; cur = cur->next) {
+			char *ser = NULL;
+			size_t ser_len = 0;
+
+			if (pkcs11h_certificate_serializeCertificateId (
+			        NULL, &ser_len, cur->certificate_id) != CKR_OK)
+				continue;
+			ser = malloc (ser_len);
+			if (!ser) continue;
+			if (pkcs11h_certificate_serializeCertificateId (
+			        ser, &ser_len, cur->certificate_id) == CKR_OK)
+				gtk_combo_box_text_append_text (id_combo, ser);
+			free (ser);
+		}
+		pkcs11h_certificate_freeCertificateIdList (certs);
+	}
+
+	pkcs11h_removeProvider (provider_path);
+	pkcs11h_terminate ();
+}
+
+static void
+pkcs11_provider_changed_cb (GtkComboBox *provider_combo, gpointer user_data)
+{
+	GtkComboBoxText *id_combo = GTK_COMBO_BOX_TEXT (user_data);
+	gs_free char *path = gtk_combo_box_text_get_active_text (GTK_COMBO_BOX_TEXT (provider_combo));
+
+	/* Clear ID and repopulate when provider changes */
+	pkcs11_populate_ids_for_provider (id_combo, (path && *path) ? path : NULL);
+}
+
+static void
+pkcs11_populate_providers (GtkComboBoxText *combo)
+{
+	CK_FUNCTION_LIST **modules;
+	int i;
+
+	gtk_combo_box_text_append_text (combo, "");
+
+	modules = p11_kit_modules_load_and_initialize (0);
+	if (!modules)
+		return;
+
+	for (i = 0; modules[i] != NULL; i++) {
+		char *path;
+		int flags;
+
+		flags = p11_kit_module_get_flags (modules[i]);
+		if (flags & P11_KIT_MODULE_TRUSTED)
+			continue;
+
+		path = p11_kit_module_get_filename (modules[i]);
+		if (path) {
+			gtk_combo_box_text_append_text (combo, path);
+			free (path);
+		}
+	}
+
+	p11_kit_modules_finalize_and_release (modules);
+}
+
+static void
 pkcs11_setup (GtkBuilder *builder,
               NMSettingVpn *s_vpn,
               ChangedCallback changed_cb,
@@ -239,6 +332,7 @@ pkcs11_setup (GtkBuilder *builder,
 {
 	NMACertChooser *cert;
 	GtkWidget *widget;
+	GtkComboBoxText *provider_combo, *id_combo;
 	const char *value;
 
 	cert = NMA_CERT_CHOOSER (gtk_builder_get_object (builder, "pkcs11_ca_cert"));
@@ -246,27 +340,84 @@ pkcs11_setup (GtkBuilder *builder,
 	nma_cert_chooser_add_to_size_group (cert, GTK_SIZE_GROUP (gtk_builder_get_object (builder, "labels")));
 	g_signal_connect (G_OBJECT (cert), "changed", G_CALLBACK (changed_cb), user_data);
 
-	widget = GTK_WIDGET (gtk_builder_get_object (builder, "pkcs11_id"));
-	if (s_vpn) {
-		value = nm_setting_vpn_get_data_item (s_vpn, NM_OPENVPN_KEY_PKCS11_ID);
-		if (value && *value) {
-			gs_free char *unescaped = NULL;
+	provider_combo = GTK_COMBO_BOX_TEXT (gtk_builder_get_object (builder, "pkcs11_provider_combo"));
+	id_combo = GTK_COMBO_BOX_TEXT (gtk_builder_get_object (builder, "pkcs11_id_combo"));
 
-			gtk_editable_set_text (GTK_EDITABLE (widget), nm_utils_str_utf8safe_unescape (value, &unescaped));
+	/* Populate providers from p11-kit */
+	pkcs11_populate_providers (provider_combo);
+
+	/* Set current values if editing existing connection */
+	if (s_vpn) {
+		const char *prov_value = nm_setting_vpn_get_data_item (s_vpn, NM_OPENVPN_KEY_PKCS11_PROVIDERS);
+		const char *id_value = nm_setting_vpn_get_data_item (s_vpn, NM_OPENVPN_KEY_PKCS11_ID);
+		gs_free char *prov_unesc = NULL;
+		gs_free char *id_unesc = NULL;
+		const char *prov = NULL;
+		const char *id = NULL;
+
+		if (prov_value && *prov_value) {
+			prov = nm_utils_str_utf8safe_unescape (prov_value, &prov_unesc);
+
+			/* Select matching provider, or append if not found */
+			GtkTreeModel *model = gtk_combo_box_get_model (GTK_COMBO_BOX (provider_combo));
+			GtkTreeIter iter;
+			int idx = 0;
+			gboolean found = FALSE;
+
+			if (gtk_tree_model_get_iter_first (model, &iter)) {
+				do {
+					gs_free char *item = NULL;
+					gtk_tree_model_get (model, &iter, 0, &item, -1);
+					if (item && g_strcmp0 (item, prov) == 0) {
+						gtk_combo_box_set_active (GTK_COMBO_BOX (provider_combo), idx);
+						found = TRUE;
+						break;
+					}
+					idx++;
+				} while (gtk_tree_model_iter_next (model, &iter));
+			}
+			if (!found) {
+				gtk_combo_box_text_append_text (provider_combo, prov);
+				gtk_combo_box_set_active (GTK_COMBO_BOX (provider_combo), idx);
+			}
+
+			/* Populate IDs for this provider */
+			pkcs11_populate_ids_for_provider (id_combo, prov);
+		}
+
+		if (id_value && *id_value) {
+			id = nm_utils_str_utf8safe_unescape (id_value, &id_unesc);
+
+			/* Select matching ID, or append if not found */
+			GtkTreeModel *model = gtk_combo_box_get_model (GTK_COMBO_BOX (id_combo));
+			GtkTreeIter iter;
+			int idx = 0;
+			gboolean found = FALSE;
+
+			if (gtk_tree_model_get_iter_first (model, &iter)) {
+				do {
+					gs_free char *item = NULL;
+					gtk_tree_model_get (model, &iter, 0, &item, -1);
+					if (item && g_strcmp0 (item, id) == 0) {
+						gtk_combo_box_set_active (GTK_COMBO_BOX (id_combo), idx);
+						found = TRUE;
+						break;
+					}
+					idx++;
+				} while (gtk_tree_model_iter_next (model, &iter));
+			}
+			if (!found) {
+				gtk_combo_box_text_append_text (id_combo, id);
+				gtk_combo_box_set_active (GTK_COMBO_BOX (id_combo), idx);
+			}
 		}
 	}
-	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (changed_cb), user_data);
 
-	widget = GTK_WIDGET (gtk_builder_get_object (builder, "pkcs11_providers"));
-	if (s_vpn) {
-		value = nm_setting_vpn_get_data_item (s_vpn, NM_OPENVPN_KEY_PKCS11_PROVIDERS);
-		if (value && *value) {
-			gs_free char *unescaped = NULL;
-
-			gtk_editable_set_text (GTK_EDITABLE (widget), nm_utils_str_utf8safe_unescape (value, &unescaped));
-		}
-	}
-	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (changed_cb), user_data);
+	/* Connect signals after setting values to avoid unnecessary refreshes */
+	g_signal_connect (G_OBJECT (provider_combo), "changed",
+	                  G_CALLBACK (pkcs11_provider_changed_cb), id_combo);
+	g_signal_connect (G_OBJECT (provider_combo), "changed", G_CALLBACK (changed_cb), user_data);
+	g_signal_connect (G_OBJECT (id_combo), "changed", G_CALLBACK (changed_cb), user_data);
 
 	widget = GTK_WIDGET (gtk_builder_get_object (builder, "pkcs11_pin"));
 	g_signal_connect (widget, "changed", G_CALLBACK (changed_cb), user_data);
@@ -538,7 +689,7 @@ validate_pkcs11 (GtkBuilder *builder, GError **error)
 {
 	gboolean valid;
 	GError *local = NULL;
-	GtkWidget *widget;
+	GtkWidget *combo;
 	const char *str;
 
 	valid = validate_cert_chooser (builder, "pkcs11_ca_cert", &local);
@@ -551,14 +702,28 @@ validate_pkcs11 (GtkBuilder *builder, GError **error)
 		return FALSE;
 	}
 
-	widget = GTK_WIDGET (gtk_builder_get_object (builder, "pkcs11_id"));
-	str = gtk_editable_get_text (GTK_EDITABLE (widget));
-	if (!str || !*str) {
-		g_set_error (error,
-		             NMV_EDITOR_PLUGIN_ERROR,
-		             NMV_EDITOR_PLUGIN_ERROR_INVALID_PROPERTY,
-		             NM_OPENVPN_KEY_PKCS11_ID);
-		return FALSE;
+	combo = GTK_WIDGET (gtk_builder_get_object (builder, "pkcs11_provider_combo"));
+	{
+		gs_free char *text = gtk_combo_box_text_get_active_text (GTK_COMBO_BOX_TEXT (combo));
+		if (!text || !*text) {
+			g_set_error (error,
+			             NMV_EDITOR_PLUGIN_ERROR,
+			             NMV_EDITOR_PLUGIN_ERROR_INVALID_PROPERTY,
+			             NM_OPENVPN_KEY_PKCS11_PROVIDERS);
+			return FALSE;
+		}
+	}
+
+	combo = GTK_WIDGET (gtk_builder_get_object (builder, "pkcs11_id_combo"));
+	{
+		gs_free char *text = gtk_combo_box_text_get_active_text (GTK_COMBO_BOX_TEXT (combo));
+		if (!text || !*text) {
+			g_set_error (error,
+			             NMV_EDITOR_PLUGIN_ERROR,
+			             NMV_EDITOR_PLUGIN_ERROR_INVALID_PROPERTY,
+			             NM_OPENVPN_KEY_PKCS11_ID);
+			return FALSE;
+		}
 	}
 
 	return TRUE;
@@ -733,22 +898,28 @@ update_pkcs11 (GtkBuilder *builder, NMSettingVpn *s_vpn)
 	                          NULL,
 	                          "pkcs11", "ca_cert", s_vpn);
 
-	widget = GTK_WIDGET (gtk_builder_get_object (builder, "pkcs11_id"));
-	str = gtk_editable_get_text (GTK_EDITABLE (widget));
-	if (str && *str) {
-		gs_free char *escaped = NULL;
+	/* Provider combo */
+	widget = GTK_WIDGET (gtk_builder_get_object (builder, "pkcs11_provider_combo"));
+	{
+		gs_free char *text = gtk_combo_box_text_get_active_text (GTK_COMBO_BOX_TEXT (widget));
+		if (text && *text) {
+			gs_free char *escaped = NULL;
 
-		nm_setting_vpn_add_data_item (s_vpn, NM_OPENVPN_KEY_PKCS11_ID,
-		                              nm_utils_str_utf8safe_escape (str, 0, &escaped));
+			nm_setting_vpn_add_data_item (s_vpn, NM_OPENVPN_KEY_PKCS11_PROVIDERS,
+			                              nm_utils_str_utf8safe_escape (text, 0, &escaped));
+		}
 	}
 
-	widget = GTK_WIDGET (gtk_builder_get_object (builder, "pkcs11_providers"));
-	str = gtk_editable_get_text (GTK_EDITABLE (widget));
-	if (str && *str) {
-		gs_free char *escaped = NULL;
+	/* ID combo */
+	widget = GTK_WIDGET (gtk_builder_get_object (builder, "pkcs11_id_combo"));
+	{
+		gs_free char *text = gtk_combo_box_text_get_active_text (GTK_COMBO_BOX_TEXT (widget));
+		if (text && *text) {
+			gs_free char *escaped = NULL;
 
-		nm_setting_vpn_add_data_item (s_vpn, NM_OPENVPN_KEY_PKCS11_PROVIDERS,
-		                              nm_utils_str_utf8safe_escape (str, 0, &escaped));
+			nm_setting_vpn_add_data_item (s_vpn, NM_OPENVPN_KEY_PKCS11_ID,
+			                              nm_utils_str_utf8safe_escape (text, 0, &escaped));
+		}
 	}
 
 	widget = (GtkWidget *) gtk_builder_get_object (builder, "pkcs11_pin");

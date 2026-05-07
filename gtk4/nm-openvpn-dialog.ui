@@ -581,7 +581,7 @@ config: static &lt;file&gt; [direction]</property>
                             <property name="column_spacing">6</property>
                             <child>
                               <object class="GtkLabel" id="label29">
-                                <property name="label" translatable="1">PKCS#11 Providers</property>
+                                <property name="label" translatable="1">PKCS#11 Provider</property>
                                 <property name="xalign">1</property>
                                 <layout>
                                   <property name="column">0</property>
@@ -610,10 +610,9 @@ config: static &lt;file&gt; [direction]</property>
                               </object>
                             </child>
                             <child>
-                              <object class="GtkEntry" id="pkcs11_providers">
+                              <object class="GtkComboBoxText" id="pkcs11_provider_combo">
                                 <property name="focusable">1</property>
-                                <property name="tooltip_text" translatable="1">Path(s) to PKCS#11 provider libraries to load. Multiple providers may be specified if supported. These libraries enable OpenVPN to access cryptographic tokens such as smart cards or HSMs.
-config: pkcs11-providers</property>
+                                <property name="tooltip_text" translatable="1">PKCS#11 provider library path.</property>
                                 <property name="hexpand">1</property>
                                 <layout>
                                   <property name="column">1</property>
@@ -623,10 +622,9 @@ config: pkcs11-providers</property>
                               </object>
                             </child>
                             <child>
-                              <object class="GtkEntry" id="pkcs11_id">
+                              <object class="GtkComboBoxText" id="pkcs11_id_combo">
                                 <property name="focusable">1</property>
-                                <property name="tooltip_text" translatable="1">Identifier of the PKCS#11 object (typically a certificate or key) to be used for authentication. This value is passed to OpenVPN to select the token object.
-config: pkcs11-id</property>
+                                <property name="tooltip_text" translatable="1">PKCS#11 certificate identifier.</property>
                                 <property name="hexpand">1</property>
                                 <layout>
                                   <property name="column">1</property>

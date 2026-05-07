@@ -354,15 +354,18 @@ pkcs11_setup (GtkBuilder *builder,
 		gs_free char *id_unesc = NULL;
 		const char *prov = NULL;
 		const char *id = NULL;
+		GtkTreeModel *model;
+		GtkTreeIter iter;
+		int idx;
+		gboolean found;
 
 		if (prov_value && *prov_value) {
 			prov = nm_utils_str_utf8safe_unescape (prov_value, &prov_unesc);
 
 			/* Select matching provider, or append if not found */
-			GtkTreeModel *model = gtk_combo_box_get_model (GTK_COMBO_BOX (provider_combo));
-			GtkTreeIter iter;
-			int idx = 0;
-			gboolean found = FALSE;
+			model = gtk_combo_box_get_model (GTK_COMBO_BOX (provider_combo));
+			idx = 0;
+			found = FALSE;
 
 			if (gtk_tree_model_get_iter_first (model, &iter)) {
 				do {
@@ -389,10 +392,9 @@ pkcs11_setup (GtkBuilder *builder,
 			id = nm_utils_str_utf8safe_unescape (id_value, &id_unesc);
 
 			/* Select matching ID, or append if not found */
-			GtkTreeModel *model = gtk_combo_box_get_model (GTK_COMBO_BOX (id_combo));
-			GtkTreeIter iter;
-			int idx = 0;
-			gboolean found = FALSE;
+			model = gtk_combo_box_get_model (GTK_COMBO_BOX (id_combo));
+			idx = 0;
+			found = FALSE;
 
 			if (gtk_tree_model_get_iter_first (model, &iter)) {
 				do {
@@ -690,7 +692,6 @@ validate_pkcs11 (GtkBuilder *builder, GError **error)
 	gboolean valid;
 	GError *local = NULL;
 	GtkWidget *combo;
-	const char *str;
 
 	valid = validate_cert_chooser (builder, "pkcs11_ca_cert", &local);
 	if (!valid) {

@@ -860,7 +860,7 @@ sk_default_filter (const GtkFileFilterInfo *filter_info, gpointer data)
 	unsigned char buffer[1024];
 	ssize_t bytes_read;
 	gboolean show = FALSE;
-	char *p;
+	const char *p;
 	char *ext;
 
 	if (!filter_info->filename)

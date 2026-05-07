@@ -195,14 +195,18 @@ properties_libnm_vpn_plugin_openvpn_editor_la_CPPFLAGS = \
 	$(properties_cppflags) \
 	$(GTK_CFLAGS) \
 	$(LIBNM_CFLAGS) \
-	$(LIBNMA_CFLAGS)
+	$(LIBNMA_CFLAGS) \
+	$(PKCS11_HELPER_CFLAGS) \
+	$(P11KIT_CFLAGS)
 
 properties_libnm_vpn_plugin_openvpn_editor_la_LIBADD = \
 	properties/libnm-vpn-plugin-openvpn-utils.la \
 	$(GLIB_LIBS) \
 	$(GTK_LIBS) \
 	$(LIBNM_LIBS) \
-	$(LIBNMA_LIBS)
+	$(LIBNMA_LIBS) \
+	$(PKCS11_HELPER_LIBS) \
+	$(P11KIT_LIBS)
 
 properties_libnm_vpn_plugin_openvpn_editor_la_LDFLAGS = \
 	-avoid-version \
@@ -226,14 +230,18 @@ properties_libnm_gtk4_vpn_plugin_openvpn_editor_la_CPPFLAGS = \
 	$(properties_cppflags) \
 	$(GTK4_CFLAGS) \
 	$(LIBNM_CFLAGS) \
-	$(LIBNMA_GTK4_CFLAGS)
+	$(LIBNMA_GTK4_CFLAGS) \
+	$(PKCS11_HELPER_CFLAGS) \
+	$(P11KIT_CFLAGS)
 
 properties_libnm_gtk4_vpn_plugin_openvpn_editor_la_LIBADD = \
 	properties/libnm-vpn-plugin-openvpn-utils.la \
 	$(GLIB_LIBS) \
 	$(GTK4_LIBS) \
 	$(LIBNM_LIBS) \
-	$(LIBNMA_GTK4_LIBS)
+	$(LIBNMA_GTK4_LIBS) \
+	$(PKCS11_HELPER_LIBS) \
+	$(P11KIT_LIBS)
 
 properties_libnm_gtk4_vpn_plugin_openvpn_editor_la_LDFLAGS = \
 	-avoid-version \

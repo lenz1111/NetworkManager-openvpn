@@ -264,7 +264,7 @@ pkcs11_populate_ids_for_provider (GtkComboBoxText *id_combo, const char *provide
 	        PKCS11H_ENUM_METHOD_CACHE_EXIST, NULL,
 	        PKCS11H_PROMPT_MASK_ALLOW_ALL, NULL, &certs) == CKR_OK) {
 		for (cur = certs; cur != NULL; cur = cur->next) {
-			char *ser = NULL;
+			g_autofree char *ser = NULL;
 			size_t ser_len = 0;
 
 			if (pkcs11h_certificate_serializeCertificateId (
@@ -274,7 +274,6 @@ pkcs11_populate_ids_for_provider (GtkComboBoxText *id_combo, const char *provide
 			if (pkcs11h_certificate_serializeCertificateId (
 			        ser, &ser_len, cur->certificate_id) == CKR_OK)
 				gtk_combo_box_text_append_text (id_combo, ser);
-			g_free (ser);
 		}
 		pkcs11h_certificate_freeCertificateIdList (certs);
 	}
@@ -403,6 +402,8 @@ pkcs11_setup (GtkBuilder *builder,
 				} while (gtk_tree_model_iter_next (model, &iter));
 			}
 			if (!found) {
+				/* ID not found in enumerated list — add it anyway,
+				 * the PKCS#11 device may be unplugged. */
 				gtk_combo_box_text_append_text (id_combo, id);
 				gtk_combo_box_set_active (GTK_COMBO_BOX (id_combo), idx);
 			}

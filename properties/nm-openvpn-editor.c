@@ -264,7 +264,7 @@ pkcs11_populate_ids_for_provider (GtkComboBoxText *id_combo, const char *provide
 	        PKCS11H_ENUM_METHOD_CACHE_EXIST, NULL,
 	        PKCS11H_PROMPT_MASK_ALLOW_ALL, NULL, &certs) == CKR_OK) {
 		for (cur = certs; cur != NULL; cur = cur->next) {
-			g_autofree char *ser = NULL;
+			gs_free char *ser = NULL;
 			size_t ser_len = 0;
 
 			if (pkcs11h_certificate_serializeCertificateId (

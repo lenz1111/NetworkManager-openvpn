@@ -560,103 +560,6 @@ config: static &lt;file&gt; [direction]</property>
                     </property>
                   </object>
                 </child>
-                <child>
-                  <object class="GtkNotebookPage">
-                    <property name="child">
-                      <object class="GtkBox" id="pkcs11">
-                        <property name="valign">start</property>
-                        <property name="orientation">vertical</property>
-                        <property name="spacing">6</property>
-                        <child>
-                          <object class="NMACertChooser" id="pkcs11_ca_cert">
-                            <property name="visible">True</property>
-                            <property name="can_focus">False</property>
-                            <property name="title" translatable="1">CA</property>
-                            <property name="flags">5</property>
-                          </object>
-                        </child>
-                        <child>
-                          <object class="GtkGrid">
-                            <property name="row_spacing">6</property>
-                            <property name="column_spacing">6</property>
-                            <child>
-                              <object class="GtkLabel" id="label29">
-                                <property name="label" translatable="1">PKCS#11 Provider</property>
-                                <property name="xalign">1</property>
-                                <layout>
-                                  <property name="column">0</property>
-                                  <property name="row">0</property>
-                                </layout>
-                              </object>
-                            </child>
-                            <child>
-                              <object class="GtkLabel" id="label30">
-                                <property name="label" translatable="1">PKCS#11 ID</property>
-                                <property name="xalign">1</property>
-                                <layout>
-                                  <property name="column">0</property>
-                                  <property name="row">1</property>
-                                </layout>
-                              </object>
-                            </child>
-                            <child>
-                              <object class="GtkLabel" id="label26">
-                                <property name="label" translatable="1">PKCS#11 PIN</property>
-                                <property name="xalign">1</property>
-                                <layout>
-                                  <property name="column">0</property>
-                                  <property name="row">2</property>
-                                </layout>
-                              </object>
-                            </child>
-                            <child>
-                              <object class="GtkComboBoxText" id="pkcs11_provider_combo">
-                                <property name="focusable">1</property>
-                                <property name="tooltip_text" translatable="1">PKCS#11 provider module.</property>
-                                <property name="hexpand">1</property>
-                                <layout>
-                                  <property name="column">1</property>
-                                  <property name="row">0</property>
-                                  <property name="column-span">2</property>
-                                </layout>
-                              </object>
-                            </child>
-                            <child>
-                              <object class="GtkComboBoxText" id="pkcs11_id_combo">
-                                <property name="focusable">1</property>
-                                <property name="tooltip_text" translatable="1">PKCS#11 certificate identifier.</property>
-                                <property name="hexpand">1</property>
-                                <layout>
-                                  <property name="column">1</property>
-                                  <property name="row">1</property>
-                                  <property name="column-span">2</property>
-                                </layout>
-                              </object>
-                            </child>
-                            <child>
-                              <object class="GtkEntry" id="pkcs11_pin">
-                                <property name="focusable">1</property>
-                                <property name="tooltip_text" translatable="1">PIN code used to unlock the PKCS#11 token when prompted by OpenVPN. If omitted, OpenVPN will request it interactively when needed.</property>
-                                <property name="hexpand">1</property>
-                                <property name="visibility">0</property>
-                                <layout>
-                                  <property name="column">1</property>
-                                  <property name="row">2</property>
-                                  <property name="column-span">2</property>
-                                </layout>
-                              </object>
-                            </child>
-                          </object>
-                        </child>
-                      </object>
-                    </property>
-                    <property name="tab">
-                      <object class="GtkLabel" id="label23">
-                        <property name="label">page 5</property>
-                      </object>
-                    </property>
-                  </object>
-                </child>
                 <layout>
                   <property name="column">0</property>
                   <property name="row">1</property>
@@ -733,9 +636,6 @@ config: static &lt;file&gt; [direction]</property>
       <widget name="label12"/>
       <widget name="label11"/>
       <widget name="auth_label"/>
-      <widget name="label29"/>
-      <widget name="label30"/>
-      <widget name="label26"/>
     </widgets>
   </object>
   <object class="GtkListStore" id="model3">
@@ -1577,7 +1477,7 @@ config: remote-cert-tls client|server</property>
                             <property name="label" translatable="1">_Verify peer (server) certificate nsCertType designation</property>
                             <property name="focusable">1</property>
                             <property name="tooltip_text" translatable="1">Require that peer certificate was signed with an explicit nsCertType designation.</property>
-                            <property name="halign">baseline-fill</property>
+                            <property name="halign">baseline</property>
                             <property name="valign">start</property>
                             <property name="use_underline">1</property>
                             <layout>

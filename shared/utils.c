@@ -223,7 +223,6 @@ nmovpn_remote_parse (const char *str,
                      GError **error)
 {
 	gs_free char *str_copy = NULL;
-	const char *tc;
 	char *t;
 	char *host = NULL;
 	char *port = NULL;
@@ -239,20 +238,20 @@ nmovpn_remote_parse (const char *str,
 	}
 	g_return_val_if_fail (!error || !*error, 0);
 
-	tc = strchr (str, ' ');
-	if (!tc)
-		tc = strchr (str, ',');
-	if (tc) {
+	t = strchr (str, ' ');
+	if (!t)
+		t = strchr (str, ',');
+	if (t) {
 		g_set_error (error, NM_UTILS_ERROR, NM_UTILS_ERROR_UNKNOWN,
-		             _("invalid delimiter character '%c'"), tc[0]);
-		idx_fail = tc - str;
+		             _("invalid delimiter character '%c'"), t[0]);
+		idx_fail = t - str;
 		goto out_fail;
 	}
 
-	if (!g_utf8_validate (str, -1, &tc)) {
+	if (!g_utf8_validate (str, -1, (const char **) &t)) {
 		g_set_error (error, NM_UTILS_ERROR, NM_UTILS_ERROR_UNKNOWN,
 		             _("invalid non-utf-8 character"));
-		idx_fail = tc - str;
+		idx_fail = t - str;
 		goto out_fail;
 	}
 

@@ -65,14 +65,13 @@ src_libnm_utils_la_LIBADD = \
 
 libexec_PROGRAMS += src/nm-openvpn-service
 
-src_nm_openvpn_service_CPPFLAGS = $(src_cppflags) $(P11KIT_CFLAGS)
+src_nm_openvpn_service_CPPFLAGS = $(src_cppflags)
 src_nm_openvpn_service_LDFLAGS = \
 	-Wl,--version-script="$(srcdir)/linker-script-binary.ver"
 src_nm_openvpn_service_LDADD = \
 	src/libnm-utils.la \
 	$(GLIB_LIBS) \
-	$(LIBNM_LIBS) \
-	$(P11KIT_LIBS)
+	$(LIBNM_LIBS)
 EXTRA_src_nm_openvpn_service_DEPENDENCIES = \
 	linker-script-binary.ver
 
@@ -196,18 +195,14 @@ properties_libnm_vpn_plugin_openvpn_editor_la_CPPFLAGS = \
 	$(properties_cppflags) \
 	$(GTK_CFLAGS) \
 	$(LIBNM_CFLAGS) \
-	$(LIBNMA_CFLAGS) \
-	$(PKCS11_HELPER_CFLAGS) \
-	$(P11KIT_CFLAGS)
+	$(LIBNMA_CFLAGS)
 
 properties_libnm_vpn_plugin_openvpn_editor_la_LIBADD = \
 	properties/libnm-vpn-plugin-openvpn-utils.la \
 	$(GLIB_LIBS) \
 	$(GTK_LIBS) \
 	$(LIBNM_LIBS) \
-	$(LIBNMA_LIBS) \
-	$(PKCS11_HELPER_LIBS) \
-	$(P11KIT_LIBS)
+	$(LIBNMA_LIBS)
 
 properties_libnm_vpn_plugin_openvpn_editor_la_LDFLAGS = \
 	-avoid-version \
@@ -231,18 +226,14 @@ properties_libnm_gtk4_vpn_plugin_openvpn_editor_la_CPPFLAGS = \
 	$(properties_cppflags) \
 	$(GTK4_CFLAGS) \
 	$(LIBNM_CFLAGS) \
-	$(LIBNMA_GTK4_CFLAGS) \
-	$(PKCS11_HELPER_CFLAGS) \
-	$(P11KIT_CFLAGS)
+	$(LIBNMA_GTK4_CFLAGS)
 
 properties_libnm_gtk4_vpn_plugin_openvpn_editor_la_LIBADD = \
 	properties/libnm-vpn-plugin-openvpn-utils.la \
 	$(GLIB_LIBS) \
 	$(GTK4_LIBS) \
 	$(LIBNM_LIBS) \
-	$(LIBNMA_GTK4_LIBS) \
-	$(PKCS11_HELPER_LIBS) \
-	$(P11KIT_LIBS)
+	$(LIBNMA_GTK4_LIBS)
 
 properties_libnm_gtk4_vpn_plugin_openvpn_editor_la_LDFLAGS = \
 	-avoid-version \
@@ -287,7 +278,6 @@ EXTRA_DIST += \
 	properties/tests/conf/iso885915.ovpn \
 	properties/tests/conf/mtu-disc.ovpn \
 	properties/tests/conf/password.conf \
-	properties/tests/conf/pkcs11.ovpn \
 	properties/tests/conf/pkcs12.ovpn \
 	properties/tests/conf/pkcs12-with-ca.ovpn \
 	properties/tests/conf/port.ovpn \

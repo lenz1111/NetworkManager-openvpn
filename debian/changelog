@@ -1,10 +1,3 @@
-
-network-manager-openvpn (1.10.2-5-tpm) noble; urgency=medium
-
-  * Added support for PKCS#11
-
- -- Piotr Filiciak <piotr@filiciak.pl>  Mon, 30 Mar 2026 15:35:05 +1300
-
 network-manager-openvpn (1.10.2-4ubuntu0.2) noble; urgency=medium
 
   * Revert back to 1.10.2-4build2 by dropping the following patch

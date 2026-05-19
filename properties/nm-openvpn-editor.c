@@ -244,7 +244,6 @@ pkcs11_populate_ids_for_provider (GtkComboBoxText *id_combo, const char *provide
 	CK_RV rv;
 
 	gtk_combo_box_text_remove_all (id_combo);
-	gtk_combo_box_text_append_text (id_combo, "");
 
 	if (!provider_path || !*provider_path)
 		return;
@@ -265,15 +264,34 @@ pkcs11_populate_ids_for_provider (GtkComboBoxText *id_combo, const char *provide
 	        PKCS11H_PROMPT_MASK_ALLOW_ALL, NULL, &certs) == CKR_OK) {
 		for (cur = certs; cur != NULL; cur = cur->next) {
 			gs_free char *ser = NULL;
+			gs_free char *label = NULL;
 			size_t ser_len = 0;
+			GString *hex;
+			size_t j;
 
 			if (pkcs11h_certificate_serializeCertificateId (
 			        NULL, &ser_len, cur->certificate_id) != CKR_OK)
 				continue;
 			ser = g_malloc (ser_len);
 			if (pkcs11h_certificate_serializeCertificateId (
-			        ser, &ser_len, cur->certificate_id) == CKR_OK)
-				gtk_combo_box_text_append_text (id_combo, ser);
+			        ser, &ser_len, cur->certificate_id) != CKR_OK)
+				continue;
+
+			hex = g_string_new (NULL);
+			for (j = 0; j < cur->certificate_id->attrCKA_ID_size; j++)
+				g_string_append_printf (hex, "%02X", (unsigned char) cur->certificate_id->attrCKA_ID[j]);
+
+			if (cur->certificate_id->token_id->label[0] && hex->len)
+				label = g_strdup_printf ("%s (%s)", cur->certificate_id->token_id->label, hex->str);
+			else if (cur->certificate_id->token_id->label[0])
+				label = g_strdup (cur->certificate_id->token_id->label);
+			else if (hex->len)
+				label = g_strdup (hex->str);
+			else
+				label = g_strdup (ser);
+			g_string_free (hex, TRUE);
+
+			gtk_combo_box_text_append (id_combo, ser, label);
 		}
 		pkcs11h_certificate_freeCertificateIdList (certs);
 	}
@@ -297,8 +315,6 @@ pkcs11_populate_providers (GtkComboBoxText *combo)
 {
 	CK_FUNCTION_LIST **modules;
 	int i;
-
-	gtk_combo_box_text_append (combo, "", "");
 
 	modules = p11_kit_modules_load_and_initialize (0);
 	if (!modules)
@@ -365,10 +381,6 @@ pkcs11_setup (GtkBuilder *builder,
 		gs_free char *id_unesc = NULL;
 		const char *prov = NULL;
 		const char *id = NULL;
-		GtkTreeModel *model;
-		GtkTreeIter iter;
-		int idx;
-		gboolean found;
 
 		if (prov_value && *prov_value) {
 			prov = nm_utils_str_utf8safe_unescape (prov_value, &prov_unesc);
@@ -380,32 +392,16 @@ pkcs11_setup (GtkBuilder *builder,
 			}
 		}
 
-		if (prov && gtk_combo_box_get_active (GTK_COMBO_BOX (provider_combo)) > 0
+		if (prov && gtk_combo_box_get_active (GTK_COMBO_BOX (provider_combo)) >= 0
 		    && id_value && *id_value) {
 			id = nm_utils_str_utf8safe_unescape (id_value, &id_unesc);
 
-			/* Try to select by text match */
-			model = gtk_combo_box_get_model (GTK_COMBO_BOX (id_combo));
-			idx = 0;
-			found = FALSE;
-
-			if (gtk_tree_model_get_iter_first (model, &iter)) {
-				do {
-					gs_free char *item = NULL;
-					gtk_tree_model_get (model, &iter, 0, &item, -1);
-					if (item && g_strcmp0 (item, id) == 0) {
-						gtk_combo_box_set_active (GTK_COMBO_BOX (id_combo), idx);
-						found = TRUE;
-						break;
-					}
-					idx++;
-				} while (gtk_tree_model_iter_next (model, &iter));
-			}
-			if (!found) {
+			/* Try to select by item ID (serialized pkcs11-id) */
+			if (!gtk_combo_box_set_active_id (GTK_COMBO_BOX (id_combo), id)) {
 				/* ID not found in enumerated list — add it anyway,
 				 * the PKCS#11 device may be unplugged. */
-				gtk_combo_box_text_append_text (id_combo, id);
-				gtk_combo_box_set_active (GTK_COMBO_BOX (id_combo), idx);
+				gtk_combo_box_text_append (id_combo, id, id);
+				gtk_combo_box_set_active_id (GTK_COMBO_BOX (id_combo), id);
 			}
 		}
 	}
@@ -909,12 +905,12 @@ update_pkcs11 (GtkBuilder *builder, NMSettingVpn *s_vpn)
 	/* ID combo */
 	widget = GTK_WIDGET (gtk_builder_get_object (builder, "pkcs11_id_combo"));
 	{
-		gs_free char *text = gtk_combo_box_text_get_active_text (GTK_COMBO_BOX_TEXT (widget));
-		if (text && *text) {
+		const char *id = gtk_combo_box_get_active_id (GTK_COMBO_BOX (widget));
+		if (id && *id) {
 			gs_free char *escaped = NULL;
 
 			nm_setting_vpn_add_data_item (s_vpn, NM_OPENVPN_KEY_PKCS11_ID,
-			                              nm_utils_str_utf8safe_escape (text, 0, &escaped));
+			                              nm_utils_str_utf8safe_escape (id, 0, &escaped));
 		}
 	}
 

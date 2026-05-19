@@ -38,6 +38,8 @@
 #include <ctype.h>
 #include <errno.h>
 #include <locale.h>
+
+#include <p11-kit/p11-kit.h>
 #include <pwd.h>
 #include <grp.h>
 #include <glib-unix.h>
@@ -340,6 +342,31 @@ args_add_vpn_data (GPtrArray *args, NMSettingVpn *s_vpn, const char *s_key, cons
 		args_add_strv (args, a_key, arg);
 }
 
+static gboolean
+is_pkcs11_provider_registered (const char *provider_path)
+{
+	CK_FUNCTION_LIST **modules;
+	gboolean found = FALSE;
+	int i;
+
+	modules = p11_kit_modules_load_and_initialize (0);
+	if (!modules)
+		return FALSE;
+
+	for (i = 0; modules[i] != NULL; i++) {
+		char *path = p11_kit_module_get_filename (modules[i]);
+
+		if (path && g_strcmp0 (path, provider_path) == 0)
+			found = TRUE;
+		free (path);
+		if (found)
+			break;
+	}
+
+	p11_kit_modules_finalize_and_release (modules);
+	return found;
+}
+
 static void
 args_add_vpn_certs (GPtrArray *args, NMSettingVpn *s_vpn)
 {
@@ -372,7 +399,10 @@ args_add_vpn_certs (GPtrArray *args, NMSettingVpn *s_vpn)
 	} else if (nmovpn_arg_is_set (pkcs11_id)) {
 		args_add_strv (args, "--pkcs11-id", pkcs11_id);
 		if (nmovpn_arg_is_set (pkcs11_providers)) {
-			args_add_strv (args, "--pkcs11-providers", pkcs11_providers);
+			if (is_pkcs11_provider_registered (pkcs11_providers))
+				args_add_strv (args, "--pkcs11-providers", pkcs11_providers);
+			else
+				_LOGW ("PKCS#11 provider '%s' is not registered in p11-kit, ignoring", pkcs11_providers);
 		}
 	} else {
 		if (nmovpn_arg_is_set (cert))
@@ -1980,6 +2010,7 @@ nm_openvpn_start_openvpn_binary (NMOpenvpnPlugin *plugin,
 	} else if (nm_streq (connection_type, NM_OPENVPN_CONTYPE_PKCS11)) {
 		args_add_strv (args, "--client");
 		args_add_vpn_certs (args, s_vpn);
+		args_add_strv (args, "--tls-exit");
 	} else {
 		g_set_error (error,
 		             NM_VPN_PLUGIN_ERROR,

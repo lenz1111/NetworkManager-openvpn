@@ -398,9 +398,34 @@ pkcs11_setup (GtkBuilder *builder,
 
 			/* Try to select by item ID (serialized pkcs11-id) */
 			if (!gtk_combo_box_set_active_id (GTK_COMBO_BOX (id_combo), id)) {
-				/* ID not found in enumerated list — add it anyway,
-				 * the PKCS#11 device may be unplugged. */
-				gtk_combo_box_text_append (id_combo, id, id);
+				/* ID not found in enumerated list — device may be unplugged.
+				 * Deserialize to show a friendly label. */
+				gs_free char *display = NULL;
+				pkcs11h_certificate_id_t cert_id = NULL;
+
+				if (pkcs11h_initialize () == CKR_OK) {
+					if (pkcs11h_certificate_deserializeCertificateId (&cert_id, id) == CKR_OK
+					    && cert_id) {
+						GString *hex = g_string_new (NULL);
+						size_t j;
+
+						for (j = 0; j < cert_id->attrCKA_ID_size; j++)
+							g_string_append_printf (hex, "%02X", (unsigned char) cert_id->attrCKA_ID[j]);
+
+						if (cert_id->token_id && cert_id->token_id->label[0] && hex->len)
+							display = g_strdup_printf ("%s (%s)", cert_id->token_id->label, hex->str);
+						else if (cert_id->token_id && cert_id->token_id->label[0])
+							display = g_strdup (cert_id->token_id->label);
+						else if (hex->len)
+							display = g_strdup (hex->str);
+						g_string_free (hex, TRUE);
+					}
+					if (cert_id)
+						pkcs11h_certificate_freeCertificateId (cert_id);
+					pkcs11h_terminate ();
+				}
+
+				gtk_combo_box_text_append (id_combo, id, display ? display : id);
 				gtk_combo_box_set_active_id (GTK_COMBO_BOX (id_combo), id);
 			}
 		}

@@ -388,44 +388,65 @@ pkcs11_setup (GtkBuilder *builder,
 
 	/* Set current values if editing existing connection */
 	if (s_vpn) {
-		const char *prov_value = nm_setting_vpn_get_data_item (s_vpn, NM_OPENVPN_KEY_PKCS11_PROVIDERS);
 		const char *id_value = nm_setting_vpn_get_data_item (s_vpn, NM_OPENVPN_KEY_PKCS11_ID);
-		gs_free char *prov_unesc = NULL;
-		gs_free char *id_unesc = NULL;
-		const char *prov = NULL;
-		const char *id = NULL;
 
-		if (prov_value && *prov_value) {
-			prov = nm_utils_str_utf8safe_unescape (prov_value, &prov_unesc);
+		if (id_value && *id_value) {
+			gs_free char *id_unesc = NULL;
+			const char *id = nm_utils_str_utf8safe_unescape (id_value, &id_unesc);
+			GtkTreeModel *model;
+			GtkTreeIter iter;
+			gboolean id_found = FALSE;
+			int i;
 
-			/* Try to select by active_id (path) — if not found, leave empty */
-			if (gtk_combo_box_set_active_id (GTK_COMBO_BOX (provider_combo), prov)) {
-				/* Populate IDs for this provider */
-				pkcs11_populate_ids_for_provider (id_combo, prov);
+			/* Try each provider to find which one has this ID */
+			model = gtk_combo_box_get_model (GTK_COMBO_BOX (provider_combo));
+			if (gtk_tree_model_get_iter_first (model, &iter)) {
+				i = 0;
+				do {
+					const char *path;
+
+					gtk_combo_box_set_active (GTK_COMBO_BOX (provider_combo), i);
+					path = gtk_combo_box_get_active_id (GTK_COMBO_BOX (provider_combo));
+					if (!path || !*path) {
+						i++;
+						continue;
+					}
+					pkcs11_populate_ids_for_provider (id_combo, path);
+					if (gtk_combo_box_set_active_id (GTK_COMBO_BOX (id_combo), id)) {
+						id_found = TRUE;
+						break;
+					}
+					i++;
+				} while (gtk_tree_model_iter_next (model, &iter));
 			}
-		}
 
-		if (prov && gtk_combo_box_get_active (GTK_COMBO_BOX (provider_combo)) >= 0
-		    && id_value && *id_value) {
-			id = nm_utils_str_utf8safe_unescape (id_value, &id_unesc);
-
-			/* Try to select by item ID (serialized pkcs11-id) */
-			if (!gtk_combo_box_set_active_id (GTK_COMBO_BOX (id_combo), id)) {
-				/* ID not found in enumerated list — device may be unplugged.
-				 * Deserialize to show a friendly label. */
-				gs_free char *display = NULL;
+			if (!id_found) {
+				/* ID not found in any provider — device may be unplugged */
+				gs_free char *label = NULL;
+				gs_free char *prov_label = NULL;
 				pkcs11h_certificate_id_t cert_id = NULL;
 
 				if (pkcs11h_initialize () == CKR_OK) {
 					if (pkcs11h_certificate_deserializeCertificateId (&cert_id, id) == CKR_OK
 					    && cert_id) {
-						display = pkcs11_cert_label (cert_id);
+						label = pkcs11_cert_label (cert_id);
+						if (cert_id->token_id)
+							prov_label = g_strdup (cert_id->token_id->model);
 						pkcs11h_certificate_freeCertificateId (cert_id);
 					}
 					pkcs11h_terminate ();
 				}
 
-				gtk_combo_box_text_append (id_combo, id, display ? display : id);
+				if (prov_label) {
+					gtk_combo_box_text_append (provider_combo, NULL, prov_label);
+					gtk_combo_box_set_active (GTK_COMBO_BOX (provider_combo),
+					                          gtk_tree_model_iter_n_children (
+					                              gtk_combo_box_get_model (GTK_COMBO_BOX (provider_combo)), NULL) - 1);
+				} else {
+					gtk_combo_box_set_active (GTK_COMBO_BOX (provider_combo), -1);
+				}
+
+				gtk_combo_box_text_append (id_combo, id, label ? label : id);
 				gtk_combo_box_set_active_id (GTK_COMBO_BOX (id_combo), id);
 			}
 		}
@@ -719,18 +740,6 @@ validate_pkcs11 (GtkBuilder *builder, GError **error)
 		return FALSE;
 	}
 
-	combo = GTK_WIDGET (gtk_builder_get_object (builder, "pkcs11_provider_combo"));
-	{
-		gs_free char *text = gtk_combo_box_text_get_active_text (GTK_COMBO_BOX_TEXT (combo));
-		if (!text || !*text) {
-			g_set_error (error,
-			             NMV_EDITOR_PLUGIN_ERROR,
-			             NMV_EDITOR_PLUGIN_ERROR_INVALID_PROPERTY,
-			             NM_OPENVPN_KEY_PKCS11_PROVIDERS);
-			return FALSE;
-		}
-	}
-
 	combo = GTK_WIDGET (gtk_builder_get_object (builder, "pkcs11_id_combo"));
 	{
 		gs_free char *text = gtk_combo_box_text_get_active_text (GTK_COMBO_BOX_TEXT (combo));
@@ -914,18 +923,6 @@ update_pkcs11 (GtkBuilder *builder, NMSettingVpn *s_vpn)
 	                          NULL,
 	                          NULL,
 	                          "pkcs11", "ca_cert", s_vpn);
-
-	/* Provider combo */
-	widget = GTK_WIDGET (gtk_builder_get_object (builder, "pkcs11_provider_combo"));
-	{
-		const char *id = gtk_combo_box_get_active_id (GTK_COMBO_BOX (widget));
-		if (id && *id) {
-			gs_free char *escaped = NULL;
-
-			nm_setting_vpn_add_data_item (s_vpn, NM_OPENVPN_KEY_PKCS11_PROVIDERS,
-			                              nm_utils_str_utf8safe_escape (id, 0, &escaped));
-		}
-	}
 
 	/* ID combo */
 	widget = GTK_WIDGET (gtk_builder_get_object (builder, "pkcs11_id_combo"));

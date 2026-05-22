@@ -65,14 +65,13 @@ src_libnm_utils_la_LIBADD = \
 
 libexec_PROGRAMS += src/nm-openvpn-service
 
-src_nm_openvpn_service_CPPFLAGS = $(src_cppflags) $(P11KIT_CFLAGS)
+src_nm_openvpn_service_CPPFLAGS = $(src_cppflags)
 src_nm_openvpn_service_LDFLAGS = \
 	-Wl,--version-script="$(srcdir)/linker-script-binary.ver"
 src_nm_openvpn_service_LDADD = \
 	src/libnm-utils.la \
 	$(GLIB_LIBS) \
-	$(LIBNM_LIBS) \
-	$(P11KIT_LIBS)
+	$(LIBNM_LIBS)
 EXTRA_src_nm_openvpn_service_DEPENDENCIES = \
 	linker-script-binary.ver
 

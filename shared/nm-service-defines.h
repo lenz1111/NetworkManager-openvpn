@@ -94,7 +94,6 @@
 #define NM_OPENVPN_KEY_HTTP_PROXY_PASSWORD       "http-proxy-password"
 
 #define NM_OPENVPN_KEY_PKCS11_ID                 "pkcs11-id"
-#define NM_OPENVPN_KEY_PKCS11_PROVIDERS          "pkcs11-providers"
 
 #define NM_OPENVPN_KEY_PASSWORD_FLAGS            "password-flags"
 #define NM_OPENVPN_KEY_CERTPASS_FLAGS            "cert-pass-flags"

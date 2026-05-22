@@ -2185,7 +2185,8 @@ advanced_dialog_new (GHashTable *hash, const char *contype)
 	if (NM_IN_STRSET (contype,
 	                  NM_OPENVPN_CONTYPE_TLS,
 	                  NM_OPENVPN_CONTYPE_PASSWORD_TLS,
-	                  NM_OPENVPN_CONTYPE_PASSWORD)) {
+	                  NM_OPENVPN_CONTYPE_PASSWORD,
+	                  NM_OPENVPN_CONTYPE_PKCS11)) {
 		value = g_hash_table_lookup (hash, NM_OPENVPN_KEY_EXTRA_CERTS);
 		if (value && value[0]) {
 			file = g_file_new_for_path (value);

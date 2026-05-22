@@ -1534,16 +1534,6 @@ do_import (const char *path, const char *contents, gsize contents_len, GError **
 			continue;
 		}
 
-		if (NM_IN_STRSET (params[0], NMV_OVPN_TAG_PKCS11_PROVIDERS)) {
-			if (!args_params_check_nargs_n (params, 1, &line_error))
-				goto handle_line_error;
-			if (!args_params_check_arg_utf8 (params, 1, NULL, &line_error))
-				goto handle_line_error;
-			setting_vpn_add_data_item_utf8safe (s_vpn, NM_OPENVPN_KEY_PKCS11_PROVIDERS, params[1]);
-			have_pkcs11 = TRUE;
-			continue;
-		}
-
 		if (params[0][0] == '<' && params[0][strlen (params[0]) - 1] == '>') {
 			gs_free char *token = g_strndup (&params[0][1], strlen (params[0]) - 2);
 			gs_free char *end_token = NULL;
@@ -2149,15 +2139,6 @@ do_export_create (NMConnection *connection, const char *path, GError **error)
 
 			args_write_line (f,
 			                 NMV_OVPN_TAG_PKCS11_ID,
-			                 nm_utils_str_utf8safe_unescape (value, &s_free));
-		}
-
-		value = nm_setting_vpn_get_data_item (s_vpn, NM_OPENVPN_KEY_PKCS11_PROVIDERS);
-		if (nmovpn_arg_is_set (value)) {
-			gs_free char *s_free = NULL;
-
-			args_write_line (f,
-			                 NMV_OVPN_TAG_PKCS11_PROVIDERS,
 			                 nm_utils_str_utf8safe_unescape (value, &s_free));
 		}
 	}

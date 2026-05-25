@@ -326,27 +326,26 @@ pkcs11_provider_changed_cb (GtkComboBox *provider_combo, gpointer user_data)
 static void
 pkcs11_populate_providers (GtkComboBoxText *combo)
 {
-	CK_FUNCTION_LIST **modules;
-	int i;
+	CK_FUNCTION_LIST **modules, **module_iter;
 
 	modules = p11_kit_modules_load_and_initialize (0);
 	if (!modules)
 		return;
 
-	for (i = 0; modules[i] != NULL; i++) {
+	for (module_iter = modules; *module_iter != NULL; module_iter++) {
 		char *path;
 		int flags;
 
-		flags = p11_kit_module_get_flags (modules[i]);
+		flags = p11_kit_module_get_flags (*module_iter);
 		if (flags & P11_KIT_MODULE_TRUSTED)
 			continue;
 
-		path = p11_kit_module_get_filename (modules[i]);
+		path = p11_kit_module_get_filename (*module_iter);
 		if (path) {
 			CK_INFO info;
 			gs_free char *label = NULL;
 
-			if (modules[i]->C_GetInfo (&info) == CKR_OK) {
+			if ((*module_iter)->C_GetInfo (&info) == CKR_OK) {
 				gs_free char *manufacturer = g_strstrip (g_strndup ((char *)info.manufacturerID, 32));
 				gs_free char *description = g_strstrip (g_strndup ((char *)info.libraryDescription, 32));
 

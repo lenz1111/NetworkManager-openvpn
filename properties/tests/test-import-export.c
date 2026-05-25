@@ -658,7 +658,7 @@ test_pkcs11_import (void)
 	_check_item (s_vpn, NM_OPENVPN_KEY_CONNECTION_TYPE, NM_OPENVPN_CONTYPE_PKCS11);
 	_check_item (s_vpn, NM_OPENVPN_KEY_DEV, "tun");
 	_check_item (s_vpn, NM_OPENVPN_KEY_PROTO_TCP, "yes");
-	_check_item (s_vpn, NM_OPENVPN_KEY_REMOTE, "173.8.149.245:1194");
+	_check_item (s_vpn, NM_OPENVPN_KEY_REMOTE, "203.0.113.10:1194");
 	_check_item (s_vpn, NM_OPENVPN_KEY_PORT, NULL);
 	_check_item (s_vpn, NM_OPENVPN_KEY_CIPHER, "AES-256-GCM");
 	_check_item (s_vpn, NM_OPENVPN_KEY_REMOTE_IP, NULL);

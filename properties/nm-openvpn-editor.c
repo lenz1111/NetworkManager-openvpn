@@ -39,7 +39,6 @@
 
 #include <pkcs11-helper-1.0/pkcs11h-core.h>
 #include <pkcs11-helper-1.0/pkcs11h-certificate.h>
-#include <pkcs11-helper-1.0/pkcs11h-token.h>
 #include <p11-kit/p11-kit.h>
 
 #include "utils.h"
@@ -48,7 +47,6 @@
 #if !GTK_CHECK_VERSION(4,0,0)
 #define gtk_editable_set_text(editable,text)		gtk_entry_set_text(GTK_ENTRY(editable), (text))
 #define gtk_editable_get_text(editable)			gtk_entry_get_text(GTK_ENTRY(editable))
-#define gtk_combo_box_get_child(combo)			gtk_bin_get_child(GTK_BIN(combo))
 #define gtk_window_destroy(window)			gtk_widget_destroy(GTK_WIDGET (window))
 #define gtk_widget_get_root(widget)			gtk_widget_get_toplevel(widget)
 #define gtk_check_button_get_active(button)		gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(button))
@@ -402,16 +400,16 @@ pkcs11_setup (GtkBuilder *builder,
 			if (gtk_tree_model_get_iter_first (model, &iter)) {
 				i = 0;
 				do {
-					const char *path;
+					gs_free char *path = NULL;
 
-					gtk_combo_box_set_active (GTK_COMBO_BOX (provider_combo), i);
-					path = gtk_combo_box_get_active_id (GTK_COMBO_BOX (provider_combo));
+					gtk_tree_model_get (model, &iter, 1, &path, -1);
 					if (!path || !*path) {
 						i++;
 						continue;
 					}
 					pkcs11_populate_ids_for_provider (id_combo, path);
 					if (gtk_combo_box_set_active_id (GTK_COMBO_BOX (id_combo), id)) {
+						gtk_combo_box_set_active (GTK_COMBO_BOX (provider_combo), i);
 						id_found = TRUE;
 						break;
 					}

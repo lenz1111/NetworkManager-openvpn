@@ -1974,6 +1974,7 @@ nm_openvpn_start_openvpn_binary (NMOpenvpnPlugin *plugin,
 	} else if (nm_streq (connection_type, NM_OPENVPN_CONTYPE_PKCS11)) {
 		args_add_strv (args, "--client");
 		args_add_vpn_certs (args, s_vpn);
+		// --tls-exit is needed for PKCS#11 to avoid retrying over and over if a wrong PIN was provided
 		args_add_strv (args, "--tls-exit");
 	} else {
 		g_set_error (error,

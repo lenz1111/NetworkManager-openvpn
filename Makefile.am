@@ -29,12 +29,6 @@ dbusservice_DATA = nm-openvpn-service.conf
 nmvpnservicedir = $(NM_VPN_SERVICE_DIR)
 nmvpnservice_DATA = nm-openvpn-service.name
 
-nmvpnsysusersdir = $(prefix)/lib/sysusers.d
-nmvpnsysusers_DATA = nm-openvpn-sysusers.conf
-
-nmvpntmpfilesdir = $(prefix)/lib/tmpfiles.d
-nmvpntmpfiles_DATA = nm-openvpn-tmpfiles.conf
-
 uidir = $(datadir)/gnome-vpn-properties/openvpn
 ui_DATA =
 
@@ -318,7 +312,6 @@ EXTRA_DIST += \
 	properties/tests/conf/tls-inline-crl-verify-file.pem \
 	properties/tests/conf/tls-inline-key.pem \
 	properties/tests/conf/tls-inline-ta.pem \
-	properties/tests/conf/data-ciphers-fallback.ovpn \
 	properties/tests/conf/proto-udp.ovpn \
 	properties/tests/conf/proto-udp4.ovpn \
 	properties/tests/conf/proto-udp6.ovpn \
@@ -337,25 +330,6 @@ endif
 auth_dialog_nm_openvpn_auth_dialog_SOURCES = \
 	$(shared_sources) \
 	auth-dialog/main.c
-if WITH_GTK4
-auth_dialog_nm_openvpn_auth_dialog_CPPFLAGS = \
-	-DICONDIR=\""$(datadir)/pixmaps"\" \
-	-DBINDIR=\""$(bindir)"\" \
-	-DGNOMELOCALEDIR=\"$(datadir)/locale\" \
-	-DNETWORKMANAGER_COMPILATION=NM_NETWORKMANAGER_COMPILATION_DEFAULT \
-	-I$(srcdir)/shared \
-	$(GLIB_CFLAGS) \
-	$(GTK4_CFLAGS) \
-	$(LIBNM_CFLAGS) \
-	$(LIBNMA_GTK4_CFLAGS) \
-	$(LIBSECRET_CFLAGS)
-auth_dialog_nm_openvpn_auth_dialog_LDADD = \
-	$(GLIB_LIBS) \
-	$(GTK4_LIBS) \
-	$(LIBNM_LIBS) \
-	$(LIBNMA_GTK4_LIBS) \
-	$(LIBSECRET_LIBS)
-else
 auth_dialog_nm_openvpn_auth_dialog_CPPFLAGS = \
 	-DICONDIR=\""$(datadir)/pixmaps"\" \
 	-DBINDIR=\""$(bindir)"\" \
@@ -367,15 +341,14 @@ auth_dialog_nm_openvpn_auth_dialog_CPPFLAGS = \
 	$(LIBNM_CFLAGS) \
 	$(LIBNMA_CFLAGS) \
 	$(LIBSECRET_CFLAGS)
+auth_dialog_nm_openvpn_auth_dialog_LDFLAGS = \
+	-Wl,--version-script="$(srcdir)/linker-script-binary.ver"
 auth_dialog_nm_openvpn_auth_dialog_LDADD = \
 	$(GLIB_LIBS) \
 	$(GTK_LIBS) \
 	$(LIBNM_LIBS) \
 	$(LIBNMA_LIBS) \
 	$(LIBSECRET_LIBS)
-endif
-auth_dialog_nm_openvpn_auth_dialog_LDFLAGS = \
-	-Wl,--version-script="$(srcdir)/linker-script-binary.ver"
 EXTRA_auth_dialog_nm_openvpn_auth_dialog_DEPENDENCIES = \
 	linker-script-binary.ver
 
@@ -396,14 +369,6 @@ nm-openvpn-service.name: $(srcdir)/nm-openvpn-service.name.in
 	    -e 's|[@]PLUGINDIR[@]/|@NM_PLUGIN_DIR_NAME_FILE@|g' \
 	    $^ >$@
 
-nm-openvpn-sysusers.conf: $(srcdir)/nm-openvpn-sysusers.conf.in
-	$(AM_V_GEN) sed -e 's|[@]LOCALSTATEDIR[@]|$(localstatedir)|g' \
-	    $^ >$@
-
-nm-openvpn-tmpfiles.conf: $(srcdir)/nm-openvpn-tmpfiles.conf.in
-	$(AM_V_GEN) sed -e 's|[@]LOCALSTATEDIR[@]|$(localstatedir)|g' \
-	    $^ >$@
-
 # we always build the tests during regular build.
 noinst_PROGRAMS += $(check_programs)
 
@@ -412,8 +377,6 @@ TESTS = $(check_programs)
 EXTRA_DIST += \
 	linker-script-binary.ver \
 	nm-openvpn-service.name.in \
-	nm-openvpn-sysusers.conf.in \
-	nm-openvpn-tmpfiles.conf.in \
 	$(dbusservice_DATA) \
 	$(appdata_in_files) \
 	$(appdata_files) \

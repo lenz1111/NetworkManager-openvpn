@@ -1439,7 +1439,9 @@ nmtst_create_minimal_connection (const char *id, const char *uuid, const char *t
 
 	g_assert (id);
 
-	if (!uuid)
+	if (uuid)
+		g_assert (nm_utils_is_uuid (uuid));
+	else
 		uuid = uuid_free = nm_utils_uuid_generate ();
 
 	if (type) {

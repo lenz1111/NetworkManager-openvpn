@@ -36,7 +36,7 @@
 
 #include "utils.h"
 #include "nm-utils/nm-shared-utils.h"
-#include "nm-utils/nm-vpn-plugin-utils.h"
+
 
 #define INLINE_BLOB_CA                  NMV_OVPN_TAG_CA
 #define INLINE_BLOB_CERT                NMV_OVPN_TAG_CERT
@@ -686,7 +686,6 @@ static char *
 inline_blob_construct_path (const char *basename, const char *token)
 {
 	gs_free char *f_filename = NULL;
-	gs_free char *path = NULL;
 
 	g_return_val_if_fail (basename, NULL);
 	g_return_val_if_fail (token && token[0], NULL);
@@ -697,8 +696,7 @@ inline_blob_construct_path (const char *basename, const char *token)
 	if (_nmovpn_test_temp_path)
 		return g_build_filename (_nmovpn_test_temp_path, f_filename, NULL);
 
-	path = nm_vpn_plugin_utils_get_cert_path ("nm-openvpn");
-	return g_build_filename (path, f_filename, NULL);
+	return g_build_filename (g_get_home_dir (), ".cert/nm-openvpn", f_filename, NULL);
 }
 
 static gboolean
@@ -1374,15 +1372,6 @@ do_import (const char *path, const char *contents, gsize contents_len, GError **
 			continue;
 		}
 
-		if (NM_IN_STRSET (params[0], NMV_OVPN_TAG_DATA_CIPHERS_FALLBACK)) {
-			if (!args_params_check_nargs_n (params, 1, &line_error))
-				goto handle_line_error;
-			if (!args_params_check_arg_utf8 (params, 1, NULL, &line_error))
-				goto handle_line_error;
-			setting_vpn_add_data_item (s_vpn, NM_OPENVPN_KEY_DATA_CIPHERS_FALLBACK, params[1]);
-			continue;
-		}
-
 		if (NM_IN_STRSET (params[0], NMV_OVPN_TAG_TLS_CIPHER)) {
 			if (!args_params_check_nargs_n (params, 1, &line_error))
 				goto handle_line_error;
@@ -1782,8 +1771,6 @@ handle_line_error:
 			                             NULL);
 		}
 	}
-	nm_setting_set_secret_flags (NM_SETTING (s_vpn), NM_OPENVPN_KEY_CHALLENGE_RESPONSE,
-	                             NM_SETTING_SECRET_FLAG_NOT_SAVED, NULL);
 
 	if (inline_blobs) {
 		GSList *tmp_list = NULL;
@@ -2130,8 +2117,6 @@ do_export_create (NMConnection *connection, const char *path, GError **error)
 
 	args_write_line_setting_value (f, NMV_OVPN_TAG_DATA_CIPHERS, s_vpn, NM_OPENVPN_KEY_DATA_CIPHERS);
 
-	args_write_line_setting_value (f, NMV_OVPN_TAG_DATA_CIPHERS_FALLBACK, s_vpn, NM_OPENVPN_KEY_DATA_CIPHERS_FALLBACK);
-
 	args_write_line_setting_value (f, NMV_OVPN_TAG_TLS_CIPHER, s_vpn, NM_OPENVPN_KEY_TLS_CIPHER);
 
 	args_write_line_setting_value_int (f, NMV_OVPN_TAG_KEYSIZE, s_vpn, NM_OPENVPN_KEY_KEYSIZE);
@@ -2217,9 +2202,6 @@ do_export_create (NMConnection *connection, const char *path, GError **error)
 
 	if (NM_IN_STRSET (connection_type,
 	                  NM_OPENVPN_CONTYPE_TLS,
-	                  /* TLS-Auth/Crypt might be used in the control channel even outside
-	                   * of the SSL/TLS mode. */
-	                  NM_OPENVPN_CONTYPE_PASSWORD,
 	                  NM_OPENVPN_CONTYPE_PASSWORD_TLS)) {
 		const char *x509_name, *key;
 

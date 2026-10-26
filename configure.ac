@@ -1,7 +1,7 @@
 AC_PREREQ(2.52)
 
 AC_INIT(NetworkManager-openvpn,
-        1.12.5,
+        1.10.2,
         https://gitlab.gnome.org/GNOME/NetworkManager-openvpn/issues,
         NetworkManager-openvpn)
 AM_INIT_AUTOMAKE([1.9 foreign tar-ustar no-dist-gzip dist-xz -Wno-portability])
@@ -120,7 +120,9 @@ if test x"$with_gtk4" != xno; then
 	PKG_CHECK_MODULES(LIBNMA_GTK4, libnma-gtk4 >= 1.8.33)
 fi
 
-PKG_CHECK_MODULES(LIBNM, libnm >= 1.52.2)
+PKG_CHECK_MODULES(LIBNM, libnm >= 1.7.0)
+LIBNM_CFLAGS="$LIBNM_CFLAGS -DNM_VERSION_MIN_REQUIRED=NM_VERSION_1_8"
+LIBNM_CFLAGS="$LIBNM_CFLAGS -DNM_VERSION_MAX_ALLOWED=NM_VERSION_1_8"
 
 NM_VPN_SERVICE_DIR=`$PKG_CONFIG --define-variable prefix='\${prefix}' --variable vpnservicedir libnm`
 AC_SUBST(NM_VPN_SERVICE_DIR)

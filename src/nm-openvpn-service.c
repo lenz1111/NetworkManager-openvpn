@@ -58,7 +58,6 @@ static struct {
 	int log_level_ovpn;
 	bool log_syslog;
 	GSList *pids_pending_list;
-	GPtrArray *tmp_file_paths;
 } gl/*obal*/;
 
 #define NM_OPENVPN_HELPER_PATH LIBEXECDIR"/nm-openvpn-service-openvpn-helper"
@@ -104,8 +103,6 @@ typedef struct {
 	char *pending_auth;
 	char *challenge_state_id;
 	char *challenge_text;
-	char *challenge_response;
-	char *challenge_flags;
 	GIOChannel *socket_channel;
 	guint socket_channel_eventid;
 } NMOpenvpnPluginIOData;
@@ -148,7 +145,6 @@ static const ValidProperty valid_properties[] = {
 	{ NM_OPENVPN_KEY_CRL_VERIFY_FILE,           G_TYPE_STRING, 0, 0, FALSE },
 	{ NM_OPENVPN_KEY_CRL_VERIFY_DIR,            G_TYPE_STRING, 0, 0, FALSE },
 	{ NM_OPENVPN_KEY_DATA_CIPHERS,              G_TYPE_STRING, 0, 0, FALSE },
-	{ NM_OPENVPN_KEY_DATA_CIPHERS_FALLBACK,     G_TYPE_STRING, 0, 0, FALSE },
 	{ NM_OPENVPN_KEY_EXTRA_CERTS,               G_TYPE_STRING, 0, 0, FALSE },
 	{ NM_OPENVPN_KEY_FLOAT,                     G_TYPE_BOOLEAN, 0, 0, FALSE },
 	{ NM_OPENVPN_KEY_NCP_DISABLE,               G_TYPE_BOOLEAN, 0, 0, FALSE },
@@ -198,7 +194,6 @@ static const ValidProperty valid_properties[] = {
 	{ NM_OPENVPN_KEY_TLS_VERSION_MIN,           G_TYPE_STRING, 0, 0, FALSE },
 	{ NM_OPENVPN_KEY_TLS_VERSION_MIN_OR_HIGHEST,G_TYPE_BOOLEAN, 0, 0, FALSE },
 	{ NM_OPENVPN_KEY_TLS_VERSION_MAX,           G_TYPE_STRING, 0, 0, FALSE },
-	{ NM_OPENVPN_KEY_CHALLENGE_RESPONSE_FLAGS,  G_TYPE_STRING, 0, 0, FALSE },
 	{ NULL,                                     G_TYPE_NONE, FALSE }
 };
 
@@ -207,7 +202,6 @@ static const ValidProperty valid_secrets[] = {
 	{ NM_OPENVPN_KEY_CERTPASS,             G_TYPE_STRING, 0, 0, FALSE },
 	{ NM_OPENVPN_KEY_NOSECRET,             G_TYPE_STRING, 0, 0, FALSE },
 	{ NM_OPENVPN_KEY_HTTP_PROXY_PASSWORD,  G_TYPE_STRING, 0, 0, FALSE },
-	{ NM_OPENVPN_KEY_CHALLENGE_RESPONSE,   G_TYPE_STRING, 0, 0, FALSE },
 	{ NULL,                                G_TYPE_NONE, FALSE }
 };
 
@@ -342,84 +336,11 @@ args_add_vpn_data (GPtrArray *args, NMSettingVpn *s_vpn, const char *s_key, cons
 		args_add_strv (args, a_key, arg);
 }
 
-/*
- * Given a file name and an (optional) user name owning the
- * connection, returns the file name to be used in the configuration.
- *
- * If the user is set, the file is accessed on behalf of the user,
- * and copied to a temporary file readable only by root. If
- * requested, the file name is unescaped.
- *
- * The returned file name must be freed by the caller.
- */
-static char *
-access_file (const char *filename,
-             const char *user,
-             gboolean do_unescape,
-             GError **error)
+static void
+args_add_vpn_certs (GPtrArray *args, NMSettingVpn *s_vpn)
 {
-	char *tmp = NULL;
-	gs_free char *to_free = NULL;
-
-	g_return_val_if_fail (filename, FALSE);
-	g_return_val_if_fail (!error || !*error, FALSE);
-
-	if (!user) {
-		if (do_unescape) {
-			return nm_utils_str_utf8safe_unescape_cp (filename);
-		} else
-			return g_strdup (filename);
-	}
-
-	/* Private connection */
-
-	if (do_unescape) {
-		filename = nm_utils_str_utf8safe_unescape (filename, &to_free);
-	}
-
-	tmp = nm_utils_copy_cert_as_user (filename, user, error);
-	if (!tmp)
-		return NULL;
-
-	g_ptr_array_add (gl.tmp_file_paths, g_strdup (tmp));
-
-	return tmp;
-}
-
-static gboolean
-args_add_file (GPtrArray *args,
-               const char *key,
-               const char *value,
-               const char *user,
-               gboolean do_unescape,
-               GError **error)
-{
-	gs_free char *file = NULL;
-
-	file = access_file (value, user, do_unescape, error);
-	if (!file)
-		return FALSE;
-
-	args_add_strv (args, key, file);
-
-	return TRUE;
-}
-
-static gboolean
-args_add_vpn_certs (GPtrArray *args,
-                    NMSettingVpn *s_vpn,
-                    const char *private_user,
-                    GError **error)
-{
-	const char *ca;
-	const char *cert;
-	const char *key;
-	gs_free char *ca_free = NULL;
-	gs_free char *cert_free = NULL;
-	gs_free char *key_free = NULL;
-	gs_free char *ca_tmp = NULL;
-	gs_free char *cert_tmp = NULL;
-	gs_free char *key_tmp = NULL;
+	const char *ca, *cert, *key;
+	gs_free char *ca_free = NULL, *cert_free = NULL, *key_free = NULL;
 
 	nm_assert (args);
 	nm_assert (NM_IS_SETTING_VPN (s_vpn));
@@ -432,36 +353,18 @@ args_add_vpn_certs (GPtrArray *args,
 	cert = nm_utils_str_utf8safe_unescape (cert, &cert_free);
 	key  = nm_utils_str_utf8safe_unescape (key,  &key_free);
 
-	if (nmovpn_arg_is_set (ca)) {
-		ca_tmp = access_file (ca, private_user, FALSE, error);
-		if (!ca_tmp)
-			return FALSE;
+	if (   nmovpn_arg_is_set (ca)
+	    && !is_pkcs12 (ca))
+		args_add_strv (args, "--ca", ca);
 
-		if (!is_pkcs12 (ca_tmp)) {
-			args_add_strv (args, "--ca", ca_tmp);
-		}
+	if (nmovpn_arg_is_set (cert) && is_pkcs12 (cert))
+		args_add_strv (args, "--pkcs12", cert);
+	else {
+		if (nmovpn_arg_is_set (cert))
+			args_add_strv (args, "--cert", cert);
+		if (nmovpn_arg_is_set (key))
+			args_add_strv (args, "--key", key);
 	}
-
-	if (nmovpn_arg_is_set (cert)) {
-		cert_tmp = access_file (cert, private_user, FALSE, error);
-		if (!cert_tmp)
-			return FALSE;
-
-		if (is_pkcs12 (cert_tmp)) {
-			args_add_strv (args, "--pkcs12", cert_tmp);
-		} else {
-			args_add_strv (args, "--cert", cert_tmp);
-
-			if (nmovpn_arg_is_set (key)) {
-				key_tmp = access_file (key, private_user, FALSE, error);
-				if (!key_tmp)
-					return FALSE;
-				args_add_strv (args, "--key", key_tmp);
-			}
-		}
-	}
-
-	return TRUE;
 }
 
 /*****************************************************************************/
@@ -521,7 +424,7 @@ validate_one_property (const char *key, const char *value, gpointer user_data)
 			             NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
 			             _("invalid address “%s”"),
 			             key);
-			return;
+			break;
 		case G_TYPE_INT:
 			errno = 0;
 			tmp = strtol (value, NULL, 10);
@@ -533,7 +436,7 @@ validate_one_property (const char *key, const char *value, gpointer user_data)
 			             NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
 			             _("invalid integer property “%s” or out of range [%d -> %d]"),
 			             key, prop->int_min, prop->int_max);
-			return;
+			break;
 		case G_TYPE_BOOLEAN:
 			if (NM_IN_STRSET (value, "yes", "no"))
 				return; /* valid */
@@ -544,14 +447,14 @@ validate_one_property (const char *key, const char *value, gpointer user_data)
 			             /* Translators: keep "yes" and "no" untranslated! */
 			             _("invalid boolean property “%s” (not yes or no)"),
 			             key);
-			return;
+			break;
 		default:
 			g_set_error (info->error,
 			             NM_VPN_PLUGIN_ERROR,
 			             NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
 			             _("unhandled property “%s” type %s"),
 			             key, g_type_name (prop->type));
-			return;
+			break;
 		}
 	}
 
@@ -784,7 +687,7 @@ pids_pending_send_sigterm (PidsPendingData *pid_data)
 	_LOGI ("openvpn[%ld]: send SIGTERM", (long) pid_data->pid);
 	pid_data->is_terminating = TRUE;
 	kill (pid_data->pid, SIGTERM);
-	pid_data->kill_id = g_timeout_add (10000, pids_pending_ensure_killed, pid_data);
+	pid_data->kill_id = g_timeout_add (2000, pids_pending_ensure_killed, pid_data);
 }
 
 static gboolean
@@ -811,7 +714,7 @@ pids_pending_wait_for_processes (void)
 	for (iter = gl.pids_pending_list; iter; iter = iter->next)
 		pids_pending_send_sigterm (iter->data);
 
-	source_id = g_timeout_add (15000, _pids_pending_wait_for_processes_timeout, &timed_out);
+	source_id = g_timeout_add (3000, _pids_pending_wait_for_processes_timeout, &timed_out);
 
 	do {
 		g_main_context_iteration (NULL, TRUE);
@@ -878,14 +781,14 @@ ovpn_quote_string (const char *unquoted)
 
 	g_return_val_if_fail (unquoted != NULL, NULL);
 
-	quoted = q = g_malloc (strlen (unquoted) * 2 + 1);
+	/* FIXME: use unpaged memory */
+	quoted = q = g_malloc0 (strlen (unquoted) * 2);
 	while (*u) {
 		/* Escape certain characters */
 		if (*u == ' ' || *u == '\\' || *u == '"')
 			*q++ = '\\';
 		*q++ = *u++;
 	}
-	*q = '\0';
 
 	return quoted;
 }
@@ -912,7 +815,7 @@ get_detail (const char *input, const char *prefix)
  * CRV1:flags:state_id:username:text
  */
 static gboolean
-parse_challenge (const char *failure_reason, char **challenge_state_id, char **challenge_text, char **challenge_flags)
+parse_challenge (const char *failure_reason, char **challenge_state_id, char **challenge_text)
 {
 	const char *colon[4];
 
@@ -936,7 +839,6 @@ parse_challenge (const char *failure_reason, char **challenge_state_id, char **c
 	if (!colon[3])
 		return FALSE;
 
-	*challenge_flags = g_strndup (colon[0] + 1, colon[1] - colon[0] - 1);
 	*challenge_state_id = g_strndup (colon[1] + 1, colon[2] - colon[1] - 1);
 	*challenge_text = g_strdup (colon[3] + 1);
 	return TRUE;
@@ -990,53 +892,37 @@ handle_auth (NMOpenvpnPluginIOData *io_data,
 		if (!username)
 			username = io_data->default_username;
 
-		if (username != NULL && io_data->challenge_state_id && io_data->challenge_response) {
+		if (username != NULL && io_data->password != NULL && io_data->challenge_state_id) {
 			gs_free char *response = NULL;
 
 			response = g_strdup_printf ("CRV1::%s::%s",
 			                            io_data->challenge_state_id,
-			                            io_data->challenge_response);
+			                            io_data->password);
 			write_user_pass (io_data->socket_channel,
 			                 requested_auth,
 			                 username,
 			                 response);
 			nm_clear_g_free (&io_data->challenge_state_id);
 			nm_clear_g_free (&io_data->challenge_text);
-			/* Don't try to reuse OTP challenge responses or we'll loop if the challenge is wrong */
-			nm_clear_g_free (&io_data->challenge_response);
 		} else if (username != NULL && io_data->password != NULL) {
 			write_user_pass (io_data->socket_channel,
 			                 requested_auth,
 			                 username,
 			                 io_data->password);
-			/* Invalidate any known OTP challenge response after reauthenticating with password
-			 * This is needed if the authenticator on the server side has invalidated a authentication
-			 * session after too many failed challenge responses
-			 */
-			if (io_data->challenge_response) {
-				nm_clear_g_free (&io_data->challenge_response);
-			}
 		} else {
 			hints = g_new0 (const char *, 3);
 			if (!username) {
 				hints[i++] = NM_OPENVPN_KEY_USERNAME;
 				*out_message = _("A username is required.");
 			}
-
-			if (io_data->challenge_state_id) {
-				/* If we have a challenge we must have already authenticated with a password */
-				if (strstr (io_data->challenge_flags, "E"))
-					hints[i++] = NM_OPENVPN_HINT_CHALLENGE_RESPONSE_ECHO;
-				else
-					hints[i++] = NM_OPENVPN_HINT_CHALLENGE_RESPONSE_NOECHO;
-				*out_message = io_data->challenge_text;
-			} else if (!io_data->password) {
+			if (!io_data->password) {
 				hints[i++] = NM_OPENVPN_KEY_PASSWORD;
-				if (username)
-					*out_message = _ ("A password is required.");
-				else
-					*out_message = _ ("A username and password are required.");
+				*out_message = _("A password is required.");
 			}
+			if (!username && !io_data->password)
+				*out_message = _("A username and password are required.");
+			if (io_data->challenge_text)
+				*out_message = io_data->challenge_text;
 		}
 		handled = TRUE;
 	} else if (nm_streq (requested_auth, "Private Key")) {
@@ -1160,12 +1046,10 @@ handle_management_socket (NMOpenvpnPlugin *plugin,
 			gs_free char *failure_reason = NULL;
 
 			failure_reason = get_detail (str, ">PASSWORD:Verification Failed: 'Auth' ['");
-			if (parse_challenge (failure_reason, &priv->io_data->challenge_state_id,
-			                     &priv->io_data->challenge_text, &priv->io_data->challenge_flags)) {
-				_LOGD ("Received challenge '%s' for state '%s' with flags '%s'",
-				       priv->io_data->challenge_text,
+			if (parse_challenge (failure_reason, &priv->io_data->challenge_state_id, &priv->io_data->challenge_text)) {
+				_LOGD ("Received challenge '%s' for state '%s'",
 				       priv->io_data->challenge_state_id,
-				       priv->io_data->challenge_flags);
+				       priv->io_data->challenge_text);
 			} else
 				_LOGW ("Password verification failed");
 
@@ -1325,10 +1209,6 @@ update_io_data_from_vpn_setting (NMOpenvpnPluginIOData *io_data,
 		g_free (io_data->password);
 	}
 	io_data->password = g_strdup (nm_setting_vpn_get_secret (s_vpn, NM_OPENVPN_KEY_PASSWORD));
-	if (io_data->challenge_response) {
-		nm_clear_g_free (&io_data->challenge_response);
-	}
-	io_data->challenge_response = g_strdup (nm_setting_vpn_get_secret (s_vpn, NM_OPENVPN_KEY_CHALLENGE_RESPONSE));
 
 	if (io_data->priv_key_pass) {
 		memset (io_data->priv_key_pass, 0, strlen (io_data->priv_key_pass));
@@ -1423,35 +1303,6 @@ check_chroot_dir_usability (const char *chdir, const char *user)
 	return b1 && b2;
 }
 
-static const char *
-get_connection_permission_user (NMConnection *connection)
-{
-    NMSettingConnection *s_con;
-    const char *ptype;
-    const char *pitem;
-    const char *pdetail;
-    guint num_perms;
-    guint i;
-
-    s_con = nm_connection_get_setting_connection (connection);
-    if (!s_con)
-        return NULL;
-
-    num_perms = nm_setting_connection_get_num_permissions (s_con);
-    if (num_perms == 0)
-        return NULL;
-
-    for (i = 0; i < num_perms; i++) {
-        if (!nm_setting_connection_get_permission (s_con, i, &ptype, &pitem, &pdetail))
-            continue;
-
-        if (nm_streq0 (ptype, "user"))
-            return pitem;
-    }
-
-    return NULL;
-}
-
 static gboolean
 nm_openvpn_start_openvpn_binary (NMOpenvpnPlugin *plugin,
                                  NMConnection *connection,
@@ -1476,7 +1327,6 @@ nm_openvpn_start_openvpn_binary (NMOpenvpnPlugin *plugin,
 	gs_free char *cmd_log = NULL;
 	NMOvpnComp comp;
 	NMOvpnAllowCompression allow_comp;
-	const char *private_user;
 
 	s_vpn = nm_connection_get_setting_vpn (connection);
 	if (!s_vpn) {
@@ -1486,8 +1336,6 @@ nm_openvpn_start_openvpn_binary (NMOpenvpnPlugin *plugin,
 		                     _("Could not process the request because the VPN connection settings were invalid."));
 		return FALSE;
 	}
-
-	private_user = get_connection_permission_user (connection);
 
 	connection_type = nm_setting_vpn_get_data_item (s_vpn, NM_OPENVPN_KEY_CONNECTION_TYPE);
 	if (!validate_connection_type (connection_type)) {
@@ -1828,7 +1676,21 @@ nm_openvpn_start_openvpn_binary (NMOpenvpnPlugin *plugin,
 
 	args_add_vpn_data (args, s_vpn, NM_OPENVPN_KEY_DATA_CIPHERS, "--data-ciphers");
 
-	args_add_vpn_data (args, s_vpn, NM_OPENVPN_KEY_DATA_CIPHERS_FALLBACK, "--data-ciphers-fallback");
+	if (nm_setting_vpn_get_data_item (s_vpn, NM_OPENVPN_KEY_CIPHER) &&
+	    !nm_setting_vpn_get_data_item (s_vpn, NM_OPENVPN_KEY_DATA_CIPHERS) &&
+	    openvpn_binary_detect_version_cached (openvpn_binary, &openvpn_binary_version) >=
+	        nmovpn_version_encode (2, 5, 0)) {
+		/* Since 2.5, openvpn will warn if "cipher" is set but "data-ciphers" doesn't
+		 * contain the cipher. It still used to automatically add the cipher.
+		 * Since 2.6, the cipher is no longer automatically added, which is unlikely
+		 * what the user wants.
+		 *
+		 * We automatically add it, so if the user only sets cipher (e.g. when
+		 * having an old profile or targeting 2.4) it still works. So ciphers
+		 * means something slightly different for the plugin, unless you set
+		 * data-ciphers to anything. */
+		args_add_vpn_data (args, s_vpn, NM_OPENVPN_KEY_CIPHER, "--data-ciphers");
+	}
 
 	args_add_vpn_data (args, s_vpn, NM_OPENVPN_KEY_TLS_CIPHER, "--tls-cipher");
 
@@ -1853,9 +1715,8 @@ nm_openvpn_start_openvpn_binary (NMOpenvpnPlugin *plugin,
 
 	tmp = nm_setting_vpn_get_data_item (s_vpn, NM_OPENVPN_KEY_TA);
 	if (nmovpn_arg_is_set (tmp)) {
-		if (!args_add_file (args, "--tls-auth", tmp, private_user, TRUE, error))
-			return FALSE;
-
+		args_add_strv (args, "--tls-auth");
+		args_add_utf8safe_str (args, tmp);
 		tmp = nm_setting_vpn_get_data_item (s_vpn, NM_OPENVPN_KEY_TA_DIR);
 		if (nmovpn_arg_is_set (tmp))
 			args_add_strv (args, tmp);
@@ -1863,14 +1724,14 @@ nm_openvpn_start_openvpn_binary (NMOpenvpnPlugin *plugin,
 
 	tmp = nm_setting_vpn_get_data_item (s_vpn, NM_OPENVPN_KEY_TLS_CRYPT);
 	if (nmovpn_arg_is_set (tmp)) {
-		if (!args_add_file (args, "--tls-crypt", tmp, private_user, TRUE, error))
-			return FALSE;
+		args_add_strv (args, "--tls-crypt");
+		args_add_utf8safe_str (args, tmp);
 	}
 
 	tmp = nm_setting_vpn_get_data_item (s_vpn, NM_OPENVPN_KEY_TLS_CRYPT_V2);
 	if (nmovpn_arg_is_set (tmp)) {
-		if (!args_add_file (args, "--tls-crypt-v2", tmp, private_user, TRUE, error))
-			return FALSE;
+		args_add_strv (args, "--tls-crypt-v2");
+		args_add_utf8safe_str (args, tmp);
 	}
 	tmp = nm_setting_vpn_get_data_item (s_vpn, NM_OPENVPN_KEY_TLS_VERSION_MIN);
 	if (nmovpn_arg_is_set (tmp)) {
@@ -1888,8 +1749,8 @@ nm_openvpn_start_openvpn_binary (NMOpenvpnPlugin *plugin,
 
 	tmp = nm_setting_vpn_get_data_item (s_vpn, NM_OPENVPN_KEY_EXTRA_CERTS);
 	if (nmovpn_arg_is_set (tmp)) {
-		if (!args_add_file(args, "--extra-certs", tmp, private_user, TRUE, error))
-			return FALSE;
+		args_add_strv (args, "--extra-certs");
+		args_add_utf8safe_str (args, tmp);
 	}
 
 	tmp = nm_setting_vpn_get_data_item (s_vpn, NM_OPENVPN_KEY_TLS_REMOTE);
@@ -2012,22 +1873,12 @@ nm_openvpn_start_openvpn_binary (NMOpenvpnPlugin *plugin,
 		args_add_strv (args, "--mtu-disc", tmp);
 
 	tmp = nm_setting_vpn_get_data_item (s_vpn, NM_OPENVPN_KEY_CRL_VERIFY_FILE);
-	if (tmp) {
-		if (!args_add_file (args, "--crl-verify", tmp, private_user, TRUE, error))
-			return FALSE;
-	} else {
+	if (tmp)
+		args_add_strv (args, "--crl-verify", tmp);
+	else {
 		tmp = nm_setting_vpn_get_data_item (s_vpn, NM_OPENVPN_KEY_CRL_VERIFY_DIR);
-		if (tmp) {
-			if (private_user) {
-				g_set_error_literal (error,
-				                     NM_VPN_PLUGIN_ERROR,
-				                     NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
-				                     _("A CRL directory can only be specified for connections "
-				                       "available to all users"));
-				return FALSE;
-			}
+		if (tmp)
 			args_add_strv (args, "--crl-verify", tmp, "dir");
-		}
 	}
 
 	tmp = nm_setting_vpn_get_data_item (s_vpn, NM_OPENVPN_KEY_LOCAL_IP);
@@ -2081,14 +1932,12 @@ nm_openvpn_start_openvpn_binary (NMOpenvpnPlugin *plugin,
 	/* Now append configuration options which are dependent on the configuration type */
 	if (nm_streq (connection_type, NM_OPENVPN_CONTYPE_TLS)) {
 		args_add_strv (args, "--client");
-		if (!args_add_vpn_certs (args, s_vpn, private_user, error))
-			return FALSE;
+		args_add_vpn_certs (args, s_vpn);
 	} else if (nm_streq (connection_type, NM_OPENVPN_CONTYPE_STATIC_KEY)) {
 		tmp = nm_setting_vpn_get_data_item (s_vpn, NM_OPENVPN_KEY_STATIC_KEY);
 		if (nmovpn_arg_is_set (tmp)) {
-			if (!args_add_file (args, "--secret", tmp, private_user, TRUE, error))
-				return FALSE;
-
+			args_add_strv (args, "--secret");
+			args_add_utf8safe_str (args, tmp);
 			tmp = nm_setting_vpn_get_data_item (s_vpn, NM_OPENVPN_KEY_STATIC_KEY_DIRECTION);
 			if (nmovpn_arg_is_set (tmp))
 				args_add_strv (args, tmp);
@@ -2101,13 +1950,12 @@ nm_openvpn_start_openvpn_binary (NMOpenvpnPlugin *plugin,
 
 		tmp = nm_setting_vpn_get_data_item (s_vpn, NM_OPENVPN_KEY_CA);
 		if (nmovpn_arg_is_set (tmp)) {
-			if (!args_add_file (args, "--ca", tmp, private_user, TRUE, error))
-				return FALSE;
+			args_add_strv (args, "--ca");
+			args_add_utf8safe_str (args, tmp);
 		}
 	} else if (nm_streq (connection_type, NM_OPENVPN_CONTYPE_PASSWORD_TLS)) {
 		args_add_strv (args, "--client");
-		if (!args_add_vpn_certs (args, s_vpn, private_user, error))
-			return FALSE;
+		args_add_vpn_certs (args, s_vpn);
 		/* Use user/path authentication */
 		args_add_strv (args, "--auth-user-pass");
 	} else {
@@ -2478,7 +2326,7 @@ static gboolean
 signal_handler (gpointer user_data)
 {
 	g_main_loop_quit (user_data);
-	return G_SOURCE_CONTINUE;
+	return G_SOURCE_REMOVE;
 }
 
 static void
@@ -2499,7 +2347,6 @@ main (int argc, char *argv[])
 	guint source_id_sigterm;
 	guint source_id_sigint;
 	gulong handler_id_plugin = 0;
-	guint i;
 
 	GOptionEntry options[] = {
 		{ "persist", 0, 0, G_OPTION_ARG_NONE, &persist, N_("Don’t quit when VPN connection terminates"), NULL },
@@ -2514,8 +2361,6 @@ main (int argc, char *argv[])
 
 	if (getenv ("OPENVPN_DEBUG"))
 		gl.debug = TRUE;
-
-	gl.tmp_file_paths = g_ptr_array_new_with_free_func(g_free);
 
 	/* locale will be set according to environment LC_* variables */
 	setlocale (LC_ALL, "");
@@ -2596,11 +2441,6 @@ main (int argc, char *argv[])
 	g_clear_object (&plugin);
 
 	pids_pending_wait_for_processes ();
-
-	for (i = 0; i < gl.tmp_file_paths->len; i++) {
-		unlink ((const char *) gl.tmp_file_paths->pdata[i]);
-	}
-	g_ptr_array_unref (gl.tmp_file_paths);
 
 	g_main_loop_unref (loop);
 	return EXIT_SUCCESS;

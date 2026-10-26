@@ -6,9 +6,9 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: NetworkManager-openvpn master\n"
-"Report-Msgid-Bugs-To: https://gitlab.gnome.org/GNOME/NetworkManager-openvpn/"
-"issues\n"
-"POT-Creation-Date: 2022-08-29 16:31+0000\n"
+"Report-Msgid-Bugs-To: https://gitlab.gnome.org/GNOME/NetworkManager-"
+"openvpn/\n"
+"POT-Creation-Date: 2022-11-14 16:45+0100\n"
 "PO-Revision-Date: 2022-08-31 19:06+0200\n"
 "Last-Translator: gogo <trebelnik2@gmail.com>\n"
 "Language-Team: Croatian <hr@li.org>\n"
@@ -28,6 +28,37 @@ msgstr "OpenVPN klijent"
 #: appdata/network-manager-openvpn.metainfo.xml.in:11
 msgid "Client for OpenVPN virtual private networks"
 msgstr "Klijent za OpenVPN virtualne privatne mreže"
+
+#: appdata/network-manager-openvpn.metainfo.xml.in:14
+msgid "network"
+msgstr ""
+
+#: appdata/network-manager-openvpn.metainfo.xml.in:15
+msgid "manager"
+msgstr ""
+
+#: appdata/network-manager-openvpn.metainfo.xml.in:16
+#, fuzzy
+#| msgid "The NetworkManager Developers"
+msgid "NetworkManager"
+msgstr "Razvijatelji Mrežnog upravitelja"
+
+#: appdata/network-manager-openvpn.metainfo.xml.in:17
+#, fuzzy
+#| msgid "Use a _TCP connection"
+msgid "connection"
+msgstr "Koristi _TCP povezivanje"
+
+#: appdata/network-manager-openvpn.metainfo.xml.in:18
+#, fuzzy
+#| msgid "OpenVPN"
+msgid "VPN"
+msgstr "OpenVPN"
+
+#: appdata/network-manager-openvpn.metainfo.xml.in:19
+#: properties/nm-openvpn-editor-plugin.c:38
+msgid "OpenVPN"
+msgstr "OpenVPN"
 
 #: appdata/network-manager-openvpn.metainfo.xml.in:23
 msgid "Support for configuring OpenVPN virtual private network connections."
@@ -50,7 +81,7 @@ msgid "Authentication required"
 msgstr "Potrebna je ovjera"
 
 #: auth-dialog/main.c:182 properties/nm-openvpn-dialog.ui:336
-#: properties/nm-openvpn-dialog.ui:435 properties/nm-openvpn-editor.c:2733
+#: properties/nm-openvpn-dialog.ui:435 properties/nm-openvpn-editor.c:2734
 msgid "Password"
 msgstr "Lozinka"
 
@@ -220,7 +251,7 @@ msgstr "nepodržan mtu-disc argument"
 msgid "unsupported crl-verify argument"
 msgstr "nepodržan crl-verify argument"
 
-#: properties/import-export.c:966 properties/import-export.c:1437
+#: properties/import-export.c:966 properties/import-export.c:1446
 msgid "invalid option"
 msgstr "nevaljana mogućnost"
 
@@ -253,39 +284,39 @@ msgstr "udaljeni poslužitelj očekuje vrstu protokola poput “udp” ili “tc
 msgid "invalid keyword “%s” in tls-version-min"
 msgstr "nevaljana ključna riječ “%s” u tls-version-min"
 
-#: properties/import-export.c:1421
+#: properties/import-export.c:1430
 msgid "invalid verify-x509-name type"
 msgstr "nevaljana verify-x509-name vrsta"
 
-#: properties/import-export.c:1557
+#: properties/import-export.c:1566
 msgid "unsupported blob/xml element"
 msgstr "nepodržani blob/xml element"
 
-#: properties/import-export.c:1586
+#: properties/import-export.c:1595
 #, c-format
 msgid "unterminated blob element <%s>"
 msgstr "neprekinuti blob element <%s>"
 
-#: properties/import-export.c:1642
+#: properties/import-export.c:1651
 #, c-format
 msgid "configuration error: %s (line %ld)"
 msgstr "greška podešavanja: %s (line %ld)"
 
-#: properties/import-export.c:1643
+#: properties/import-export.c:1652
 msgid "unknown or unsupported option"
 msgstr "nepoznata ili nepodržana mogućnost"
 
-#: properties/import-export.c:1658
+#: properties/import-export.c:1667
 msgid "The file to import wasn’t a valid OpenVPN client configuration"
 msgstr "Datoteka za uvoz nije valjano podešavanje OpenVPN klijenta"
 
-#: properties/import-export.c:1666
+#: properties/import-export.c:1675
 msgid "The file to import wasn’t a valid OpenVPN configuration (no remote)"
 msgstr ""
 "Datoteka za uvoz nije valjano OpenVPN podešavanje (nema udaljenog "
 "poslužitelja)"
 
-#: properties/import-export.c:1677
+#: properties/import-export.c:1686
 msgid ""
 "The file to import wasn’t a valid OpenVPN configuration (--pkcs12 can not be "
 "used with --cert or --key)"
@@ -293,7 +324,7 @@ msgstr ""
 "Datoteka za uvoz nije valjano OpenVPN podešavanje (--pkcs12 ne može se "
 "koristiti sa --cert ili --key)"
 
-#: properties/import-export.c:1687
+#: properties/import-export.c:1696
 msgid ""
 "The file to import wasn’t a valid OpenVPN configuration (--ca can not be "
 "PKCS#12 format)"
@@ -301,11 +332,11 @@ msgstr ""
 "Datoteka za uvoz nije valjano OpenVPN podešavanje  (--ca ne može biti u "
 "PKCS#12 formatu)"
 
-#: properties/import-export.c:1696
+#: properties/import-export.c:1705
 msgid "The file to import wasn’t a valid OpenVPN configuration (missing --ca)"
 msgstr "Datoteka za uvoz nije valjano OpenVPN podešavanje (nedostaje --ca)"
 
-#: properties/import-export.c:1706
+#: properties/import-export.c:1715
 msgid ""
 "The file to import wasn’t a valid OpenVPN configuration (if you use one of --"
 "cert or --key, you must use them both)"
@@ -313,7 +344,7 @@ msgstr ""
 "Datoteka za uvoz nije valjano OpenVPN podešavanje (ako vidite jedan od --"
 "cert ili --key, morate ih oboje koristiti)"
 
-#: properties/import-export.c:1717
+#: properties/import-export.c:1726
 msgid ""
 "The file to import wasn’t a valid OpenVPN configuration (--cert can not be "
 "PKCS#12 format.)"
@@ -321,7 +352,7 @@ msgstr ""
 "Datoteka za uvoz nije valjano OpenVPN podešavanje (--cert ne može biti u "
 "PKCS#12 formatu.)"
 
-#: properties/import-export.c:1725
+#: properties/import-export.c:1734
 msgid ""
 "The file to import wasn’t a valid OpenVPN configuration (--key can not be "
 "PKCS#12 format.)"
@@ -329,19 +360,19 @@ msgstr ""
 "Datoteka za uvoz nije valjano OpenVPN podešavanje (--key ne može biti u "
 "PKCS#12 formatu.)"
 
-#: properties/import-export.c:1977
+#: properties/import-export.c:1986
 msgid "missing path argument"
 msgstr "nedostaje path argument"
 
-#: properties/import-export.c:1987
+#: properties/import-export.c:1996
 msgid "connection is not a valid OpenVPN connection"
 msgstr "povezivanje nije valjano OpenVPN povezivanje"
 
-#: properties/import-export.c:1996
+#: properties/import-export.c:2005
 msgid "connection was incomplete (missing gateway)"
 msgstr "povezivanje je nepotpuno (nedostaje pristupnik)"
 
-#: properties/import-export.c:2370
+#: properties/import-export.c:2381
 #, c-format
 msgid "failed to write file: %s"
 msgstr "neuspjelo zapisivanje datoteke: %s"
@@ -378,8 +409,8 @@ msgstr "LZO onemogućen (zastarjelo)"
 msgid "LZO adaptive (legacy)"
 msgstr "LZO adaptivan (zastarjelo)"
 
-#: properties/nm-openvpn-dialog.ui:126 properties/nm-openvpn-editor.c:377
-#: properties/nm-openvpn-editor.c:1014 properties/nm-openvpn-editor.c:1819
+#: properties/nm-openvpn-dialog.ui:126 properties/nm-openvpn-editor.c:379
+#: properties/nm-openvpn-editor.c:1016 properties/nm-openvpn-editor.c:1821
 msgid "None"
 msgstr "Nepoznat"
 
@@ -474,7 +505,7 @@ msgstr "Lokalna IP adresa"
 msgid "Key Direction"
 msgstr "Smjer ključa"
 
-#: properties/nm-openvpn-dialog.ui:582 properties/nm-openvpn-editor.c:2760
+#: properties/nm-openvpn-dialog.ui:582 properties/nm-openvpn-editor.c:2761
 msgid "Static Key"
 msgstr "Nepromjenjivi ključ"
 
@@ -529,7 +560,7 @@ msgstr "Odaberi vrstu ovjere."
 msgid "Ad_vanced…"
 msgstr "Na_predno…"
 
-#: properties/nm-openvpn-dialog.ui:852 properties/nm-openvpn-editor.c:1619
+#: properties/nm-openvpn-dialog.ui:852 properties/nm-openvpn-editor.c:1621
 msgid "Not required"
 msgstr "Nije potrebno"
 
@@ -1264,119 +1295,115 @@ msgstr "Odaberi datoteku ključa"
 msgid "Choose extra certificate file"
 msgstr "Odaberi dodatnu datoteku vjerodajnice"
 
-#: properties/nm-openvpn-editor.c:780
+#: properties/nm-openvpn-editor.c:782
 msgid "OpenVPN Static Keys (*.key)"
 msgstr "OpenVPN nepromjenjivi ključevi (*.key)"
 
-#: properties/nm-openvpn-editor.c:937 properties/nm-openvpn-editor.c:1031
+#: properties/nm-openvpn-editor.c:939 properties/nm-openvpn-editor.c:1033
 msgid "Default"
 msgstr "Zadani"
 
-#: properties/nm-openvpn-editor.c:1015
+#: properties/nm-openvpn-editor.c:1017
 msgid "RSA MD-4"
 msgstr "RSA MD-4"
 
-#: properties/nm-openvpn-editor.c:1016
+#: properties/nm-openvpn-editor.c:1018
 msgid "MD-5"
 msgstr "MD-5"
 
-#: properties/nm-openvpn-editor.c:1017
+#: properties/nm-openvpn-editor.c:1019
 msgid "SHA-1"
 msgstr "SHA-1"
 
-#: properties/nm-openvpn-editor.c:1018
+#: properties/nm-openvpn-editor.c:1020
 msgid "SHA-224"
 msgstr "SHA-224"
 
-#: properties/nm-openvpn-editor.c:1019
+#: properties/nm-openvpn-editor.c:1021
 msgid "SHA-256"
 msgstr "SHA-256"
 
-#: properties/nm-openvpn-editor.c:1020
+#: properties/nm-openvpn-editor.c:1022
 msgid "SHA-384"
 msgstr "SHA-384"
 
-#: properties/nm-openvpn-editor.c:1021
+#: properties/nm-openvpn-editor.c:1023
 msgid "SHA-512"
 msgstr "SHA-512"
 
-#: properties/nm-openvpn-editor.c:1022
+#: properties/nm-openvpn-editor.c:1024
 msgid "RIPEMD-160"
 msgstr "RIPEMD-160"
 
-#: properties/nm-openvpn-editor.c:1080
+#: properties/nm-openvpn-editor.c:1082
 msgid "Don’t verify certificate identification"
 msgstr "Ne provjeravaj identifikaciju vjerodajnice"
 
-#: properties/nm-openvpn-editor.c:1086
+#: properties/nm-openvpn-editor.c:1088
 msgid "Verify whole subject exactly"
 msgstr "Provjeri točno cijeli sadržaj"
 
-#: properties/nm-openvpn-editor.c:1092
+#: properties/nm-openvpn-editor.c:1094
 msgid "Verify name exactly"
 msgstr "Provjeri točno cijeli naziv"
 
-#: properties/nm-openvpn-editor.c:1098
+#: properties/nm-openvpn-editor.c:1100
 msgid "Verify name by prefix"
 msgstr "Provjeri naziv prema prefiksu"
 
-#: properties/nm-openvpn-editor.c:1104
+#: properties/nm-openvpn-editor.c:1106
 msgid "Verify subject partially (legacy mode, strongly discouraged)"
 msgstr ""
 "Provjeri sadržaj djelomično (zastarjeli način, strogo se ne preporučuje)"
 
-#: properties/nm-openvpn-editor.c:1217 properties/nm-openvpn-editor.c:1289
+#: properties/nm-openvpn-editor.c:1219 properties/nm-openvpn-editor.c:1291
 msgid "Server"
 msgstr "Poslužitelj"
 
-#: properties/nm-openvpn-editor.c:1222 properties/nm-openvpn-editor.c:1294
+#: properties/nm-openvpn-editor.c:1224 properties/nm-openvpn-editor.c:1296
 msgid "Client"
 msgstr "Klijent"
 
-#: properties/nm-openvpn-editor.c:1621
+#: properties/nm-openvpn-editor.c:1623
 msgid "HTTP"
 msgstr "HTTP"
 
-#: properties/nm-openvpn-editor.c:1623
+#: properties/nm-openvpn-editor.c:1625
 msgid "SOCKS"
 msgstr "SOCKS"
 
-#: properties/nm-openvpn-editor.c:1738
+#: properties/nm-openvpn-editor.c:1740
 msgid "TUN"
 msgstr "TUN"
 
-#: properties/nm-openvpn-editor.c:1740
+#: properties/nm-openvpn-editor.c:1742
 msgid "TAP"
 msgstr "TAP"
 
 #. interface name is max 15 chars
-#: properties/nm-openvpn-editor.c:1747
+#: properties/nm-openvpn-editor.c:1749
 msgid "(automatic)"
 msgstr "(automatski)"
 
-#: properties/nm-openvpn-editor.c:1910
+#: properties/nm-openvpn-editor.c:1912
 msgid "ping-exit"
 msgstr "ping-exit"
 
-#: properties/nm-openvpn-editor.c:1912
+#: properties/nm-openvpn-editor.c:1914
 msgid "ping-restart"
 msgstr "ping-restart"
 
-#: properties/nm-openvpn-editor.c:2722
+#: properties/nm-openvpn-editor.c:2723
 msgid "Certificates (TLS)"
 msgstr "Vjerodajnice (TLS)"
 
-#: properties/nm-openvpn-editor.c:2747
+#: properties/nm-openvpn-editor.c:2748
 msgid "Password with Certificates (TLS)"
 msgstr "Lozinka s vjerodajnicama (TLS)"
 
-#: properties/nm-openvpn-editor.c:2927
+#: properties/nm-openvpn-editor.c:2904
 msgid "could not load UI widget"
 msgstr "neuspješno učitavanje korisničkog sučelja"
-
-#: properties/nm-openvpn-editor-plugin.c:38
-msgid "OpenVPN"
-msgstr "OpenVPN"
 
 #: properties/nm-openvpn-editor-plugin.c:39
 msgid "Compatible with the OpenVPN server."
@@ -1464,179 +1491,179 @@ msgstr "nevaljani ulaz"
 msgid "invalid protocol"
 msgstr "nevaljani protokol"
 
-#: src/nm-openvpn-service.c:432
+#: src/nm-openvpn-service.c:425
 #, c-format
 msgid "invalid address “%s”"
 msgstr "nevaljana adresa “%s”"
 
-#: src/nm-openvpn-service.c:444
+#: src/nm-openvpn-service.c:437
 #, c-format
 msgid "invalid integer property “%s” or out of range [%d -> %d]"
 msgstr "nevaljano cjelobrojno svojstvo “%s” ili je izvan raspona [%d -> %d]"
 
 #. Translators: keep "yes" and "no" untranslated!
-#: src/nm-openvpn-service.c:455
+#: src/nm-openvpn-service.c:448
 #, c-format
 msgid "invalid boolean property “%s” (not yes or no)"
 msgstr "nevaljano boolean svojstvo “%s” (ne da ili da)"
 
-#: src/nm-openvpn-service.c:462
+#: src/nm-openvpn-service.c:455
 #, c-format
 msgid "unhandled property “%s” type %s"
 msgstr "nerukujuće svojstvo “%s” vrste %s"
 
-#: src/nm-openvpn-service.c:473
+#: src/nm-openvpn-service.c:466
 #, c-format
 msgid "property “%s” invalid or not supported"
 msgstr "svojstvo “%s” je neispravano ili nepodržano"
 
-#: src/nm-openvpn-service.c:489
+#: src/nm-openvpn-service.c:482
 msgid "No VPN configuration options."
 msgstr "Nema mogućnosti VPN podešavanja."
 
-#: src/nm-openvpn-service.c:946
+#: src/nm-openvpn-service.c:916
 msgid "A username is required."
 msgstr "Potrebno je korisničko ime."
 
-#: src/nm-openvpn-service.c:950
+#: src/nm-openvpn-service.c:920
 msgid "A password is required."
 msgstr "Potrebna je lozinka."
 
-#: src/nm-openvpn-service.c:953
+#: src/nm-openvpn-service.c:923
 msgid "A username and password are required."
 msgstr "Korisničko ime i lozinka su potrebni."
 
-#: src/nm-openvpn-service.c:975
+#: src/nm-openvpn-service.c:945
 msgid "A private key password is required."
 msgstr "Lozinka privatnog ključa je potrebna."
 
-#: src/nm-openvpn-service.c:988
+#: src/nm-openvpn-service.c:958
 msgid "An HTTP Proxy username is required."
 msgstr "HTTP proxy korisničko ime je potrebno."
 
-#: src/nm-openvpn-service.c:992
+#: src/nm-openvpn-service.c:962
 msgid "An HTTP Proxy password is required."
 msgstr "HTTP proxy lozinka je potrebna."
 
-#: src/nm-openvpn-service.c:995
+#: src/nm-openvpn-service.c:965
 msgid "An HTTP Proxy username and password are required."
 msgstr "HTTP proxy korisničko ime i lozinka su potrebni."
 
-#: src/nm-openvpn-service.c:1366 src/nm-openvpn-service.c:2198
-#: src/nm-openvpn-service.c:2233
+#: src/nm-openvpn-service.c:1336 src/nm-openvpn-service.c:2186
+#: src/nm-openvpn-service.c:2221
 msgid ""
 "Could not process the request because the VPN connection settings were "
 "invalid."
 msgstr "Nemoguća obrada zahtjeva jer su postavke VPN povezivanja nevaljane."
 
-#: src/nm-openvpn-service.c:1375 src/nm-openvpn-service.c:2207
+#: src/nm-openvpn-service.c:1345 src/nm-openvpn-service.c:2195
 msgid "Invalid connection type."
 msgstr "Nevaljana vrsta povezivanja."
 
-#: src/nm-openvpn-service.c:1393
+#: src/nm-openvpn-service.c:1363
 msgid "Could not find the openvpn binary."
 msgstr "Nemoguć pronalazak openvpn binarne datoteke."
 
-#: src/nm-openvpn-service.c:1441
+#: src/nm-openvpn-service.c:1411
 #, c-format
 msgid "Invalid port number “%s”."
 msgstr "Nevaljani broj ulaza “%s”."
 
-#: src/nm-openvpn-service.c:1461
+#: src/nm-openvpn-service.c:1431
 #, c-format
 msgid "Invalid proto “%s”."
 msgstr "Nevaljani protokol “%s”."
 
-#: src/nm-openvpn-service.c:1510
+#: src/nm-openvpn-service.c:1480
 #, c-format
 msgid "Invalid proxy type “%s”."
 msgstr "Nevaljana proxy vrsta “%s”."
 
-#: src/nm-openvpn-service.c:1608
+#: src/nm-openvpn-service.c:1578
 #, c-format
 msgid "Invalid ping duration “%s”."
 msgstr "Nevaljano ping trajanje “%s”."
 
-#: src/nm-openvpn-service.c:1621
+#: src/nm-openvpn-service.c:1591
 #, c-format
 msgid "Invalid ping-exit duration “%s”."
 msgstr "Nevaljano ping-exit trajanje “%s”."
 
-#: src/nm-openvpn-service.c:1634
+#: src/nm-openvpn-service.c:1604
 #, c-format
 msgid "Invalid ping-restart duration “%s”."
 msgstr "Nevaljane ping-restart trajanje “%s”."
 
-#: src/nm-openvpn-service.c:1647
+#: src/nm-openvpn-service.c:1617
 #, c-format
 msgid "Invalid connect timeout “%s”."
 msgstr "Nevaljani istek povezivanja “%s”."
 
-#: src/nm-openvpn-service.c:1672
+#: src/nm-openvpn-service.c:1642
 #, c-format
 msgid "Invalid max-routes argument “%s”."
 msgstr "Nevaljani max-routes argument “%s”."
 
-#: src/nm-openvpn-service.c:1716
+#: src/nm-openvpn-service.c:1704
 #, c-format
 msgid "Invalid keysize “%s”."
 msgstr "Nevaljana veličina ključa “%s”."
 
-#: src/nm-openvpn-service.c:1788
+#: src/nm-openvpn-service.c:1776
 msgid "Invalid configuration with tls-remote and verify-x509-name."
 msgstr "Nevaljano podešavanje sa tls-remote i verify-x509-name."
 
-#: src/nm-openvpn-service.c:1801
+#: src/nm-openvpn-service.c:1789
 msgid "Invalid verify-x509-name."
 msgstr "Nevaljano verify-x509-name."
 
-#: src/nm-openvpn-service.c:1824
+#: src/nm-openvpn-service.c:1812
 #, c-format
 msgid "Invalid reneg seconds “%s”."
 msgstr "Nevaljane sekunde ponovnog pregovaranja “%s”."
 
-#: src/nm-openvpn-service.c:1854
+#: src/nm-openvpn-service.c:1842
 #, c-format
 msgid "Invalid TUN MTU size “%s”."
 msgstr "Nevaljana TUN MTU veličina “%s”."
 
-#: src/nm-openvpn-service.c:1867
+#: src/nm-openvpn-service.c:1855
 #, c-format
 msgid "Invalid fragment size “%s”."
 msgstr "Nevaljana veličina fragmenta “%s”."
 
-#: src/nm-openvpn-service.c:1977
+#: src/nm-openvpn-service.c:1965
 #, c-format
 msgid "Unknown connection type “%s”."
 msgstr "Nepoznata vrsta povezivanja “%s”."
 
-#: src/nm-openvpn-service.c:1995
+#: src/nm-openvpn-service.c:1983
 #, c-format
 msgid "User “%s” not found, check NM_OPENVPN_USER."
 msgstr "Korisnik “%s” nije pronađen, provjerite NM_OPENVPN_USER."
 
-#: src/nm-openvpn-service.c:2007
+#: src/nm-openvpn-service.c:1995
 #, c-format
 msgid "Group “%s” not found, check NM_OPENVPN_GROUP."
 msgstr "Grupa “%s” nije pronađena, provjerite NM_OPENVPN_GROUP."
 
-#: src/nm-openvpn-service.c:2246
+#: src/nm-openvpn-service.c:2234
 msgid "Unhandled pending authentication."
 msgstr "Nepoznato čekanje ovjere."
 
-#: src/nm-openvpn-service.c:2364
+#: src/nm-openvpn-service.c:2352
 msgid "Don’t quit when VPN connection terminates"
 msgstr "Ne zatvaraj kada se VPN povezivanje prekida"
 
-#: src/nm-openvpn-service.c:2365
+#: src/nm-openvpn-service.c:2353
 msgid "Enable verbose debug logging (may expose passwords)"
 msgstr "Omogući opširno zapisivanje otklanjanja grešaka (može otkriti lozinke)"
 
-#: src/nm-openvpn-service.c:2366
+#: src/nm-openvpn-service.c:2354
 msgid "D-Bus name to use for this instance"
 msgstr "D-Bus naziv za korištenje s ovim primjerkom"
 
-#: src/nm-openvpn-service.c:2392
+#: src/nm-openvpn-service.c:2380
 msgid ""
 "nm-openvpn-service provides integrated OpenVPN capability to NetworkManager."
 msgstr ""
